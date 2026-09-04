@@ -293,6 +293,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
   const [scanMsg, setScanMsg] = useState(null);
   const [lastScan, setLastScan] = useState(null); // visual confirmation chip
   const [phonePairing, setPhonePairing] = useState(null);
+  const [phonePairingOpen, setPhonePairingOpen] = useState(false);
   const [phonePairingLoading, setPhonePairingLoading] = useState(false);
   const [phonePairingMsg, setPhonePairingMsg] = useState(null);
 
@@ -475,6 +476,14 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
 
   async function handleOpenPhoneScanner() {
     if (!transactionId || completed) return;
+
+    // The pairing can remain active while its QR dialog is hidden. Re-open the
+    // existing dialog instead of creating a second scanner session.
+    if (phonePairing) {
+      setPhonePairingOpen(true);
+      return;
+    }
+
     setPhonePairingLoading(true);
     setPhonePairingMsg(null);
     try {
@@ -482,6 +491,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
       const publicOrigin = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
       const scannerUrl = `${publicOrigin.replace(/\/$/, "")}/scanner?sessionId=${pairing.sessionId}&token=${encodeURIComponent(pairing.token)}`;
       setPhonePairing({ ...pairing, scannerUrl });
+      setPhonePairingOpen(true);
     } catch (err) {
       setPhonePairingMsg({ ok: false, text: err.message || "Could not pair the phone scanner." });
     } finally {
@@ -489,7 +499,11 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
     }
   }
 
-  async function closePhoneScanner() {
+  function hidePhoneScanner() {
+    setPhonePairingOpen(false);
+  }
+
+  async function disconnectPhoneScanner() {
     if (!phonePairing) return;
     try {
       await request(`/api/pos/scanner-sessions/${phonePairing.sessionId}`, {
@@ -500,6 +514,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
       // The pairing may already have expired; closing the dialog is still safe.
     }
     setPhonePairing(null);
+    setPhonePairingOpen(false);
   }
 
   async function checkStockAvailability(productId, qty, ignoreLineId = null) {
@@ -689,7 +704,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
         completedAt: new Date().toISOString(),
       });
       setTransactionMsg({ ok: true, text: "Sale completed. Stock deducted and revenue recorded." });
-      closePhoneScanner();
+      disconnectPhoneScanner();
       if (paymentMethod === "CASH") {
         try { await refreshSession(session.id); } catch { /* best effort */ }
       }
@@ -710,7 +725,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
         body: { reason: voidReason.trim() || "Voided by cashier" },
       });
       setCompleted(true);
-      closePhoneScanner();
+      disconnectPhoneScanner();
       setVoidConfirmOpen(false);
       setTransactionMsg({ ok: true, text: "Ticket voided." });
     } catch (err) {
@@ -721,7 +736,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
   }
 
   function handleNewSale() {
-    closePhoneScanner();
+    disconnectPhoneScanner();
     setTransactionId("");
     setLines([]);
     setCompleted(false);
@@ -748,7 +763,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
         body: { countedCash: Number(countedCash) },
       });
       setCloseMsg({ ok: true, text: "Session closed and reconciled." });
-      closePhoneScanner();
+      disconnectPhoneScanner();
       setSession((s) => ({ ...s, status: "CLOSED" }));
       setSessionModal(null);
       setTransactionId("");
@@ -859,7 +874,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
                   disabled={phonePairingLoading}
                   style={{ padding: "5px 9px" }}
                 >
-                  <Smartphone size={14} /> {phonePairingLoading ? "Pairing…" : "Use phone"}
+                  <Smartphone size={14} /> {phonePairingLoading ? "Pairing…" : phonePairing ? "Show phone QR" : "Use phone"}
                 </button>
               }
             >
@@ -891,6 +906,18 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
                 <div className="scanner-flash">
                   <CheckCircle2 size={14} /> Added {lastScan.qty}{" "}
                   {lastScan.unit === "kg" ? "kg" : "×"} {lastScan.name}
+                </div>
+              )}
+              {phonePairing && (
+                <div className="phone-pairing-status">
+                  <div>
+                    <Smartphone size={14} />
+                    <span><strong>Phone scanner paired</strong><small>Scans will appear in this ticket automatically.</small></span>
+                  </div>
+                  <div className="phone-pairing-status-actions">
+                    <button type="button" className="btn btn-small" onClick={() => setPhonePairingOpen(true)}>Show QR</button>
+                    <button type="button" className="btn btn-small btn-danger" onClick={disconnectPhoneScanner}>Disconnect</button>
+                  </div>
                 </div>
               )}
               <div className="scanner-hint">
@@ -1231,10 +1258,10 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
       </div>
 
       {/* Modals */}
-      {phonePairing && (
-        <Modal title="Pair phone scanner" icon={<Smartphone size={16} />} onClose={closePhoneScanner}>
+      {phonePairing && phonePairingOpen && (
+        <Modal title="Pair phone scanner" icon={<Smartphone size={16} />} onClose={hidePhoneScanner}>
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 0 }}>
-            Connect the phone to this same Wi‑Fi network, scan this QR code, and keep this window open while scanning.
+            Connect the phone to this same Wi‑Fi network and scan this QR code. After the phone is paired, close this window — the scanner will stay active.
           </p>
           <div className="phone-pairing-qr">
             <QRCodeSVG value={phonePairing.scannerUrl} size={220} includeMargin />
@@ -1258,7 +1285,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
           </div>
           <Message ok={phonePairingMsg?.ok} text={phonePairingMsg?.text} />
           <div className="modal-actions">
-            <button type="button" className="btn btn-primary" onClick={closePhoneScanner}>Done</button>
+            <button type="button" className="btn btn-primary" onClick={hidePhoneScanner}>Done</button>
           </div>
         </Modal>
       )}
@@ -1396,6 +1423,15 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
           padding: 6px 10px; border-radius: 6px;
           background: #E4EFE3; color: var(--green-deep); font-size: 13px; font-weight: 600;
         }
+        .phone-pairing-status {
+          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+          margin-top: 12px; padding: 10px 12px;
+          border: 1px solid #B9D5BD; border-radius: 8px; background: #F0F8F0; color: var(--green-deep);
+        }
+        .phone-pairing-status > div:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .phone-pairing-status span { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+        .phone-pairing-status small { color: var(--ink-soft); font-size: 11px; }
+        .phone-pairing-status-actions { display: flex; gap: 6px; flex-shrink: 0; }
         .scanner-hint { margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
         .phone-pairing-qr { display: flex; justify-content: center; padding: 12px; margin: 12px 0; background: #fff; border: 1px solid var(--hairline-strong); border-radius: 10px; }
         .phone-pairing-url { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--paper); border-radius: 7px; }
