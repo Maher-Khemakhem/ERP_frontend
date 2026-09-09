@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, Boxes, CircleDollarSign, LayoutGrid, ShoppingCart } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Boxes, CircleDollarSign, LayoutGrid, PackagePlus, RefreshCw, ShoppingCart, Tag, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useApi } from "../../lib/apiClient.jsx";
 import { Panel, Message, Empty } from "../../design/components.jsx";
 
@@ -16,7 +17,7 @@ function productName(products, productId) {
 }
 
 export default function DashboardModule() {
-  const { request } = useApi();
+  const { request, hasAnyRole } = useApi();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState({
@@ -116,7 +117,7 @@ export default function DashboardModule() {
   }, [data]);
 
   const statCards = [
-    { label: "Products", value: totals.productCount, detail: "active SKUs", icon: Boxes, tone: "green" },
+    { label: "Products", value: totals.productCount, detail: `${totals.priceCount} with a selling price`, icon: Boxes, tone: "green" },
     {
       label: "Total earnings",
       value: `${totals.ticketEarnings.toFixed(3)} TND`,
@@ -130,10 +131,49 @@ export default function DashboardModule() {
 
   return (
     <div>
-      <h1 className="page-title">Dashboard</h1>
-      <p className="page-sub">A quick view of the store: stock, pricing, cash and operational alerts.</p>
+      <div className="dashboard-heading">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">A quick view of the store: stock, pricing, cash and operational alerts.</p>
+        </div>
+        <button className="btn" onClick={loadDashboard} disabled={loading}>
+          <RefreshCw size={14} className={loading ? "spin" : ""} />
+          {loading ? "Refreshing..." : "Refresh"}
+        </button>
+      </div>
 
       <Message ok={false} text={error} />
+
+      <div className="dashboard-actions" aria-label="Quick actions">
+        {hasAnyRole(["ADMIN", "MANAGER", "CASHIER"]) && (
+          <Link className="dashboard-action" to="/pos">
+            <ShoppingCart size={16} />
+            <span><strong>Start a sale</strong><small>Open the checkout</small></span>
+            <ArrowRight size={15} />
+          </Link>
+        )}
+        {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
+          <Link className="dashboard-action" to="/inventory">
+            <PackagePlus size={16} />
+            <span><strong>Receive stock</strong><small>Add products or lots</small></span>
+            <ArrowRight size={15} />
+          </Link>
+        )}
+        {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
+          <Link className="dashboard-action" to="/procurement">
+            <Truck size={16} />
+            <span><strong>Review supply</strong><small>Orders and alerts</small></span>
+            <ArrowRight size={15} />
+          </Link>
+        )}
+        {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
+          <Link className="dashboard-action" to="/pricing">
+            <Tag size={16} />
+            <span><strong>Update pricing</strong><small>Prices and promotions</small></span>
+            <ArrowRight size={15} />
+          </Link>
+        )}
+      </div>
 
       <div className="dashboard-grid">
         {statCards.map(({ label, value, detail, icon: Icon, tone }) => (
@@ -188,9 +228,6 @@ export default function DashboardModule() {
         </Panel>
       </div>
 
-      <button className="btn btn-primary" onClick={loadDashboard} disabled={loading} style={{ marginTop: 8 }}>
-        {loading ? "Refreshing…" : "Refresh dashboard"}
-      </button>
     </div>
   );
 }

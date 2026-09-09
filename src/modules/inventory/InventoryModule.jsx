@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { Plus, RefreshCw, AlertTriangle, Truck, Boxes } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, RefreshCw, AlertTriangle, Truck, Boxes, Search, Trash2 } from "lucide-react";
 import { useApi } from "../../lib/apiClient.jsx";
-import { ShelfTag, Field, Chip, Panel, Message, Empty, Tabs } from "../../design/components.jsx";
+import { ShelfTag, Field, Chip, Panel, Message, Empty, Modal } from "../../design/components.jsx";
 
 export default function InventoryModule() {
   const { request } = useApi();
@@ -35,15 +35,26 @@ export default function InventoryModule() {
       <h1 className="page-title">Inventory</h1>
       <p className="page-sub">Products, lots and stock levels — the foundation everything else builds on.</p>
 
-      <Tabs
-        active={tab}
-        onChange={setTab}
-        tabs={[
-          { key: "products", label: "Products" },
-          { key: "receive", label: "Receive stock" },
-          { key: "stock", label: "Stock levels" },
-        ]}
-      />
+      <div className="inventory-summary" aria-label="Inventory summary">
+        <div><span>Products</span><strong>{products.length}</strong></div>
+        <div><span>Perishable</span><strong>{products.filter((product) => product.perishable).length}</strong></div>
+        <div><span>Weight items</span><strong>{products.filter((product) => product.unitType === "WEIGHT").length}</strong></div>
+      </div>
+
+      <div className="inventory-actions" role="toolbar" aria-label="Inventory actions">
+        <button type="button" className={`inventory-action ${tab === "products" ? "active" : ""}`} onClick={() => setTab("products")}>
+          <Boxes size={16} />
+          <span><strong>Products</strong><small>Catalog and product actions</small></span>
+        </button>
+        <button type="button" className={`inventory-action ${tab === "receive" ? "active" : ""}`} onClick={() => setTab("receive")}>
+          <Truck size={16} />
+          <span><strong>Receive stock</strong><small>Add a delivery or lot</small></span>
+        </button>
+        <button type="button" className={`inventory-action ${tab === "stock" ? "active" : ""}`} onClick={() => setTab("stock")}>
+          <Search size={16} />
+          <span><strong>Stock levels</strong><small>Check quantity and expiry</small></span>
+        </button>
+      </div>
 
       {tab === "products" && (
         <ProductsTab products={products} loading={productsLoading} error={productsError} onRefresh={fetchProducts} onCreated={fetchProducts} />
@@ -59,6 +70,15 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
   const [form, setForm] = useState({ sku: "", name: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [query, setQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return products;
+    return products.filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(normalizedQuery));
+  }, [products, query]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -83,6 +103,7 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
       });
       setMsg({ ok: true, text: `Product "${form.name}" added.` });
       setForm({ sku: "", name: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+      setShowForm(false);
       onCreated();
     } catch (err) {
       setMsg({ ok: false, text: err.message || "Could not add the product." });
@@ -92,56 +113,50 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
   }
 
   return (
-    <div className="grid">
-      <Panel title="Add a product" icon={<Plus size={16} />}>
-        <Message ok={msg?.ok} text={msg?.text} />
-        <form onSubmit={handleSubmit}>
-          <Field label="SKU">
-            <input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" />
-          </Field>
-          <Field label="Name">
-            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Organic bananas" />
-          </Field>
-          <Field label="Unit type">
-            <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
-              <option value="EACH">Each (whole units)</option>
-              <option value="WEIGHT">Weight (kg)</option>
-            </select>
-          </Field>
-          <Field label="Reorder point">
-            <input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} />
-          </Field>
-          <Field label="VAT rate (%)">
-            <input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} />
-          </Field>
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.perishable} onChange={(e) => setForm({ ...form, perishable: e.target.checked })} />
-            This product is perishable
-          </label>
-          <button type="submit" className="btn btn-primary" disabled={creating} style={{ width: "100%", justifyContent: "center" }}>
-            {creating ? "Adding…" : "Add product"}
-          </button>
-        </form>
-      </Panel>
-
+    <div>
       <Panel
         title="Products"
         icon={<Boxes size={16} />}
         right={
-          <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: "5px 10px" }}>
-            <RefreshCw size={13} /> Refresh
-          </button>
+          <div className="inventory-panel-actions">
+            <button className="btn btn-primary btn-small" onClick={() => { setMsg(null); setShowForm(true); }}><Plus size={13} /> Add product</button>
+            <button className="btn btn-small" onClick={onRefresh} disabled={loading}><RefreshCw size={13} /> Refresh</button>
+          </div>
         }
       >
         <Message ok={false} text={error} />
+        <div className="inventory-list-toolbar">
+          <label className="inventory-search">
+            <Search size={14} />
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or SKU" aria-label="Search products" />
+          </label>
+          <span className="inventory-result-count">{filteredProducts.length} of {products.length}</span>
+        </div>
         {!error && products.length === 0 && !loading && <Empty>No products yet. Add one to get started.</Empty>}
-        {products.map((p) => (
+        {!error && products.length > 0 && filteredProducts.length === 0 && <Empty>No products match “{query}”.</Empty>}
+        {filteredProducts.map((p) => (
           <ShelfTag key={p.id}>
             <div className="tag-row">
               <div>
                 <div className="tag-name">{p.name}</div>
                 <div className="tag-sku">{p.sku}</div>
               </div>
+              <button type="button" className="btn-icon danger" onClick={async () => {
+                if (!window.confirm(`Delete ${p.name}? This only works if it has not been used in stock, pricing, or sales.`)) return;
+                setDeletingId(p.id);
+                setMsg(null);
+                try {
+                  await request(`/api/inventory/products/${p.id}`, { method: "DELETE" });
+                  setMsg({ ok: true, text: `Product "${p.name}" deleted.` });
+                  onRefresh();
+                } catch (err) {
+                  setMsg({ ok: false, text: err.message || "Could not delete the product." });
+                } finally {
+                  setDeletingId(null);
+                }
+              }} disabled={deletingId === p.id} aria-label={`Delete ${p.name}`} title="Delete product">
+                <Trash2 size={15} />
+              </button>
             </div>
             <div className="tag-meta">
               <Chip>{p.unitType}</Chip>
@@ -156,6 +171,29 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
           </ShelfTag>
         ))}
       </Panel>
+
+      {showForm && (
+        <Modal title="Add a product" icon={<Plus size={16} />} onClose={() => !creating && setShowForm(false)}>
+          <Message ok={msg?.ok} text={msg?.text} />
+          <form onSubmit={handleSubmit}>
+            <Field label="SKU"><input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" autoFocus /></Field>
+            <Field label="Name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Organic bananas" /></Field>
+            <Field label="Unit type">
+              <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
+                <option value="EACH">Each (whole units)</option>
+                <option value="WEIGHT">Weight (kg)</option>
+              </select>
+            </Field>
+            <Field label="Reorder point"><input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} /></Field>
+            <Field label="VAT rate (%)"><input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} /></Field>
+            <label className="checkbox-row"><input type="checkbox" checked={form.perishable} onChange={(e) => setForm({ ...form, perishable: e.target.checked })} /> This product is perishable</label>
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={() => setShowForm(false)} disabled={creating}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Adding..." : "Add product"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -272,7 +310,8 @@ function StockTab({ products }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const reorderPoint = products.find((p) => p.id === productId)?.reorderPoint;
+  const selectedProduct = products.find((p) => p.id === productId);
+  const reorderPoint = selectedProduct?.reorderPoint;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -347,7 +386,7 @@ function StockTab({ products }) {
               <ShelfTag key={lot.id}>
                 <div className="tag-row">
                   <div>
-                    <div className="tag-name">{lot.quantity} units</div>
+                    <div className="tag-name">{lot.quantity} {selectedProduct?.unitType === "WEIGHT" ? "kg" : "units"}</div>
                     <div className="tag-sku">Lot {lot.id.slice(0, 8)}</div>
                   </div>
                   {i === 0 && sortedLots.length > 1 && <Chip>Sells first (FEFO)</Chip>}
@@ -378,7 +417,26 @@ function isSoonToExpire(isoDate) {
 }
 
 const moduleStyles = `
+  .inventory-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .inventory-action { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 13px 14px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; cursor: pointer; }
+  .inventory-action:hover { border-color: var(--green); background: #FBFCF8; }
+  .inventory-action.active { color: var(--green-deep); border-color: var(--green); box-shadow: inset 0 -3px 0 var(--green); }
+  .inventory-action > svg { flex-shrink: 0; color: var(--green); }
+  .inventory-action span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .inventory-action strong { font-size: 13px; }
+  .inventory-action small { overflow: hidden; color: var(--ink-soft); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .inventory-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .inventory-summary div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; }
+  .inventory-summary span { color: var(--ink-soft); font-size: 12px; }
+  .inventory-summary strong { color: var(--green-deep); font-family: 'Space Grotesk', sans-serif; font-size: 20px; }
+  .inventory-list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .inventory-search { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; padding: 8px 10px; background: #FBFBF7; border: 1px solid var(--hairline-strong); border-radius: 6px; color: var(--ink-soft); }
+  .inventory-search:focus-within { outline: 2px solid var(--green); outline-offset: 1px; }
+  .inventory-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
+  .inventory-result-count { flex-shrink: 0; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; }
   .stock-stat { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 2px; }
   .stock-num { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; color: var(--green-deep); }
   .stock-unit { font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 680px) { .inventory-actions { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .inventory-summary { grid-template-columns: 1fr; } .inventory-list-toolbar { align-items: stretch; flex-direction: column; } }
 `;
