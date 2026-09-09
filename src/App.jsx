@@ -1,26 +1,30 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, Package, Tag, ShoppingCart, Truck, Wallet } from "lucide-react";
+import { LayoutGrid, Package, Tag, ShoppingCart, Truck, Wallet, Shield, LogOut } from "lucide-react";
 import { useApi } from "./lib/apiClient.jsx";
+import LoginPage from "./auth/LoginPage.jsx";
 import DashboardModule from "./modules/dashboard/DashboardModule.jsx";
 import InventoryModule from "./modules/inventory/InventoryModule.jsx";
 import PricingModule from "./modules/pricing/PricingModule.jsx";
 import POSModule from "./modules/pos/POSModule.jsx";
 import ProcurementModule from "./modules/procurement/ProcurementModule.jsx";
 import FinanceModule from "./modules/finance/FinanceModule.jsx";
+import UserManagementModule from "./modules/admin/UserManagementModule.jsx";
 import PhoneScannerPage from "./modules/pos/PhoneScannerPage.jsx";
 
 const MODULES = [
-  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutGrid, status: "active" },
-  { key: "inventory", path: "/inventory", label: "Inventory", icon: Package, status: "active" },
-  { key: "pricing", path: "/pricing", label: "Pricing", icon: Tag, status: "active" },
-  { key: "pos", path: "/pos", label: "POS", icon: ShoppingCart, status: "active" },
-  { key: "procurement", path: "/procurement", label: "Procurement", icon: Truck, status: "active" },
-  { key: "finance", path: "/finance", label: "Finance", icon: Wallet, status: "active" },
+  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutGrid, status: "active", roles: [] },
+  { key: "inventory", path: "/inventory", label: "Inventory", icon: Package, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"] },
+  { key: "pricing", path: "/pricing", label: "Pricing", icon: Tag, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"] },
+  { key: "pos", path: "/pos", label: "POS", icon: ShoppingCart, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { key: "procurement", path: "/procurement", label: "Procurement", icon: Truck, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"] },
+  { key: "finance", path: "/finance", label: "Finance", icon: Wallet, status: "active", roles: ["ADMIN", "MANAGER", "ACCOUNTANT"] },
+  { key: "users", path: "/users", label: "Users", icon: Shield, status: "active", roles: ["ADMIN"] },
 ];
 
 function Sidebar() {
   const location = useLocation();
+  const { hasAnyRole } = useApi();
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -33,7 +37,7 @@ function Sidebar() {
         </div>
       </div>
       <nav className="nav">
-        {MODULES.map((m) => {
+        {MODULES.filter((m) => hasAnyRole(m.roles)).map((m) => {
           const Icon = m.icon;
           const active = location.pathname.startsWith(m.path);
           const content = (
@@ -76,10 +80,19 @@ function ApiConnectionControl() {
   );
 }
 
+function RoleRoute({ roles, children }) {
+  const { hasAnyRole } = useApi();
+  return hasAnyRole(roles) ? children : <Navigate to="/dashboard" replace />;
+}
+
 export default function App() {
+  const { auth, logout } = useApi();
   const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
   if (normalizedPath === "/scanner") {
     return <PhoneScannerPage />;
+  }
+  if (!auth?.user) {
+    return <LoginPage />;
   }
 
   return (
@@ -89,15 +102,21 @@ export default function App() {
       <main className="main">
         <div className="topbar-anchor">
           <ApiConnectionControl />
+          <div className="user-chip" title={auth.user.roles.join(", ")}>
+            <span>{auth.user.displayName || auth.user.username}</span>
+            <small>{auth.user.roles.join(" · ")}</small>
+          </div>
+          <button type="button" className="btn btn-small" onClick={logout}><LogOut size={14} /> Sign out</button>
         </div>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardModule />} />
-          <Route path="/inventory" element={<InventoryModule />} />
-          <Route path="/pricing" element={<PricingModule />} />
-          <Route path="/pos" element={<POSModule />} />
-          <Route path="/procurement" element={<ProcurementModule />} />
-          <Route path="/finance" element={<FinanceModule />} />
+          <Route path="/inventory" element={<RoleRoute roles={MODULES[1].roles}><InventoryModule /></RoleRoute>} />
+          <Route path="/pricing" element={<RoleRoute roles={MODULES[2].roles}><PricingModule /></RoleRoute>} />
+          <Route path="/pos" element={<RoleRoute roles={MODULES[3].roles}><POSModule /></RoleRoute>} />
+          <Route path="/procurement" element={<RoleRoute roles={MODULES[4].roles}><ProcurementModule /></RoleRoute>} />
+          <Route path="/finance" element={<RoleRoute roles={MODULES[5].roles}><FinanceModule /></RoleRoute>} />
+          <Route path="/users" element={<RoleRoute roles={MODULES[6].roles}><UserManagementModule /></RoleRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -127,13 +146,15 @@ function ShellStyles() {
       a.nav-item:hover:not(.active) { background: rgba(255,255,255,0.08); }
       .nav-item .badge { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.05em; background: rgba(255,255,255,0.12); padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
       .main { flex: 1; min-width: 0; padding: 28px 36px 48px; }
-      .topbar-anchor { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+      .topbar-anchor { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 8px; }
       .api-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 10px; }
       .api-row input { border: none; outline: none; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; width: 190px; background: transparent; color: var(--ink); }
       .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
       .dot.ok { background: var(--green); }
       .dot.fail { background: var(--red); }
       .dot.unknown { background: #B4B6A0; }
+      .user-chip { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; color: var(--ink); font-size: 12px; }
+      .user-chip small { color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 9px; }
       .page-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 26px; margin: 0; }
       .page-sub { color: var(--ink-soft); font-size: 13.5px; margin-top: 4px; margin-bottom: 24px; }
     `}</style>

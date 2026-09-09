@@ -52,6 +52,7 @@ Restart Vite after changing environment variables. Do not put secrets in `VITE_*
 | `/pos` | Till selection, cash sessions, tickets, checkout, and phone pairing |
 | `/procurement` | Suppliers, purchase orders, receiving, and low-stock alerts |
 | `/finance` | Journals, P&L, supplier invoices, and payments |
+| `/users` | Admin-only user and role management |
 | `/scanner` | Phone barcode-scanner page opened from a POS pairing |
 
 `/` redirects to `/dashboard`; unknown routes also redirect to `/dashboard`.
@@ -118,6 +119,22 @@ cd ..\ERP
 ```
 
 If the API is hosted elsewhere, set `VITE_API_BASE_URL` or use the API base URL control in the application shell. The backend must allow the browser origin through its development CORS configuration.
+
+## Authentication and roles
+
+When the database has no users, the frontend displays a first-admin setup form. After that, users sign in with their username and password. The JWT is kept in browser local storage and sent as a bearer token on API requests; signing out removes it.
+
+The role-to-module visibility is:
+
+| Role | Modules |
+| --- | --- |
+| `ADMIN` | Everything, including Users |
+| `MANAGER` | Dashboard, Inventory, Pricing, POS, Procurement, Finance |
+| `CASHIER` | Dashboard and POS |
+| `INVENTORY_MANAGER` | Dashboard, Inventory, Pricing, Procurement |
+| `ACCOUNTANT` | Dashboard and Finance |
+
+The frontend hides modules the current role cannot use and the backend enforces the same permissions. The Users screen is available at `/users` to administrators.
 
 ## Development guidelines
 

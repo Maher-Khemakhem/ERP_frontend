@@ -68,7 +68,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.field input[type="text"], .field input[type="number"], .field input[type="date"], .field select {
+.field input[type="text"], .field input[type="number"], .field input[type="date"], .field input[type="password"], .field select {
   border: 1px solid var(--hairline-strong);
   border-radius: 6px;
   padding: 9px 10px;
