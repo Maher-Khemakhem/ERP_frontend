@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useApi } from "../../lib/apiClient.jsx";
-import { ShelfTag, Field, Chip, Panel, Message, Empty, Tabs, Modal } from "../../design/components.jsx";
+import { ShelfTag, Field, Chip, Panel, Message, Empty, Modal } from "../../design/components.jsx";
 
 function parseMoney(str) {
   const n = parseFloat(str);
@@ -68,16 +68,19 @@ export default function POSModule() {
     <div>
       <h1 className="page-title">POS</h1>
       <p className="page-sub">Open a drawer, ring up items, take payment.</p>
+      <style>{posNavigationStyles}</style>
 
-      <Tabs
-        active={tab}
-        onChange={setTab}
-        tabs={[
-          { key: "checkout", label: "Checkout" },
-          { key: "tills", label: "Tills" },
-          { key: "tickets", label: "Tickets" },
-        ]}
-      />
+      <div className="pos-navigation" role="toolbar" aria-label="POS workflows">
+        <button type="button" className={`pos-navigation-action ${tab === "checkout" ? "active" : ""}`} onClick={() => setTab("checkout")}>
+          <ShoppingCart size={16} /><span><strong>Checkout</strong><small>Scan and take payment</small></span>
+        </button>
+        <button type="button" className={`pos-navigation-action ${tab === "tills" ? "active" : ""}`} onClick={() => setTab("tills")}>
+          <Lock size={16} /><span><strong>Tills</strong><small>Drawers and cash sessions</small></span>
+        </button>
+        <button type="button" className={`pos-navigation-action ${tab === "tickets" ? "active" : ""}`} onClick={() => setTab("tickets")}>
+          <Receipt size={16} /><span><strong>Tickets</strong><small>Sales history and receipts</small></span>
+        </button>
+      </div>
 
       {tab === "tills" && (
         <TillsTab tills={tills} loading={tillsLoading} error={tillsError} onRefresh={fetchTills} />
@@ -103,6 +106,18 @@ export default function POSModule() {
     </div>
   );
 }
+
+const posNavigationStyles = `
+  .pos-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .pos-navigation-action { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 13px 14px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; cursor: pointer; }
+  .pos-navigation-action:hover { border-color: var(--green); background: #FBFCF8; }
+  .pos-navigation-action.active { color: var(--green-deep); border-color: var(--green); box-shadow: inset 0 -3px 0 var(--green); }
+  .pos-navigation-action > svg { flex-shrink: 0; color: var(--green); }
+  .pos-navigation-action span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .pos-navigation-action strong { font-size: 13px; }
+  .pos-navigation-action small { color: var(--ink-soft); font-size: 11px; }
+  @media (max-width: 680px) { .pos-navigation { grid-template-columns: 1fr; } }
+`;
 
 function TillsTab({ tills, loading, error, onRefresh }) {
   const { request } = useApi();
