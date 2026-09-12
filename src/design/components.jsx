@@ -24,9 +24,9 @@ export function Chip({ children, warn = false }) {
   return <span className={`chip ${warn ? "warn" : ""}`}>{children}</span>;
 }
 
-export function Panel({ title, icon, right, children }) {
+export function Panel({ title, icon, right, className = "", children }) {
   return (
-    <section className="panel">
+    <section className={`panel ${className}`.trim()}>
       <h2 className="panel-title" style={right ? { justifyContent: "space-between" } : undefined}>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {icon} {title}
@@ -88,6 +88,8 @@ export function Tabs({ tabs, active, onChange }) {
 export function Modal({ title, icon, onClose, children }) {
   const modalRef = useRef(null);
   const previouslyFocused = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Lock background scroll, trap focus inside the dialog, and restore both
   // the scroll position and the triggering element's focus on close.
@@ -107,7 +109,7 @@ export function Modal({ title, icon, onClose, children }) {
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -130,7 +132,7 @@ export function Modal({ title, icon, onClose, children }) {
       document.body.style.overflow = originalOverflow;
       previouslyFocused.current?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

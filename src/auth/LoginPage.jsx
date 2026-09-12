@@ -35,7 +35,11 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       if (setupRequired) {
-        await registerFirstAdmin(form);
+        await registerFirstAdmin({
+          username: form.username,
+          displayName: form.displayName,
+          password: form.password,
+        });
       } else {
         await login({ username: form.username, password: form.password });
       }
@@ -54,7 +58,7 @@ export default function LoginPage() {
           {setupRequired ? <UserPlus size={21} /> : <LockKeyhole size={21} />}
           <div>
             <h1>{checkingSetup ? "Connecting" : setupRequired ? "Create administrator" : "Sign in"}</h1>
-            <p>{checkingSetup ? "Checking whether this store needs its first user." : setupRequired ? "Create the first account to secure this store." : "Use your store account to continue."}</p>
+            <p>{checkingSetup ? "Checking whether the system needs its first user." : setupRequired ? "Create the first account to secure the system." : "Use your account to continue."}</p>
           </div>
         </div>
         {message && <div className="auth-error" role="alert">{message}</div>}

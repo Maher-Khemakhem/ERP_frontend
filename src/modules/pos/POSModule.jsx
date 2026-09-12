@@ -3,7 +3,8 @@ import {
   ShoppingCart, Plus, RefreshCw, Receipt, Lock, Unlock, ScanLine,
   CircleDollarSign, Trash2, XCircle, Barcode, Printer, History,
   Search, CreditCard, Banknote, Minus, PackageSearch, AlertTriangle,
-  CheckCircle2, ArrowRight, ShoppingBag, Smartphone, Copy,
+  CheckCircle2, ArrowRight, ShoppingBag, Smartphone, Copy, ChevronRight,
+  X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useApi } from "../../lib/apiClient.jsx";
@@ -21,6 +22,56 @@ function formatMoney(value) {
 
 const POS_VAT_RATE = 19;
 
+const PRODUCT_IMAGE_URLS = {
+  water: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=640&q=80",
+  milk: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=640&q=80",
+  bread: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=640&q=80",
+  fruit: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=640&q=80",
+  vegetable: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=640&q=80",
+  coffee: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=640&q=80",
+  generic: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=640&q=80",
+};
+
+function productFamilyName(name) {
+  const match = String(name || "").match(/^(.+?)\s+[-|/]\s+.+$/);
+  return match ? match[1].trim() : null;
+}
+
+function productFamily(product) {
+  return product?.familyName?.trim() || productFamilyName(product?.name);
+}
+
+function resolveAssetUrl(url, apiBase) {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = apiBase || window.location.origin;
+  return `${base.replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
+}
+
+function productImage(product, apiBase) {
+  if (product?.familyImageUrl) return resolveAssetUrl(product.familyImageUrl, apiBase);
+  if (product?.imageUrl) return resolveAssetUrl(product.imageUrl, apiBase);
+  const name = String(product?.name || "").toLowerCase();
+  if (name.includes("water") || name.includes("eau")) return PRODUCT_IMAGE_URLS.water;
+  if (name.includes("milk") || name.includes("lait")) return PRODUCT_IMAGE_URLS.milk;
+  if (name.includes("bread") || name.includes("pain")) return PRODUCT_IMAGE_URLS.bread;
+  if (name.includes("fruit") || name.includes("apple") || name.includes("banana") || name.includes("orange")) return PRODUCT_IMAGE_URLS.fruit;
+  if (name.includes("vegetable") || name.includes("tomato") || name.includes("tomate")) return PRODUCT_IMAGE_URLS.vegetable;
+  if (name.includes("coffee") || name.includes("cafe")) return PRODUCT_IMAGE_URLS.coffee;
+  return PRODUCT_IMAGE_URLS.generic;
+}
+
+function productGlyph(product) {
+  const name = String(product?.name || "").toLowerCase();
+  if (name.includes("water") || name.includes("eau")) return "💧";
+  if (name.includes("milk") || name.includes("lait")) return "🥛";
+  if (name.includes("bread") || name.includes("pain")) return "🥖";
+  if (name.includes("fruit") || name.includes("apple") || name.includes("banana") || name.includes("orange")) return "🍎";
+  if (name.includes("vegetable") || name.includes("tomato") || name.includes("tomate")) return "🥬";
+  if (name.includes("coffee") || name.includes("cafe")) return "☕";
+  return "🛍️";
+}
+
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
@@ -37,9 +88,16 @@ export default function POSModule() {
   const [resumeTicketId, setResumeTicketId] = useState(null);
 
   const [products, setProducts] = useState([]);
+  const [prices, setPrices] = useState([]);
   useEffect(() => {
-    request("/api/inventory/products")
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
+    Promise.all([
+      request("/api/inventory/products"),
+      request("/api/pricing/prices"),
+    ])
+      .then(([productData, priceData]) => {
+        setProducts(Array.isArray(productData) ? productData : []);
+        setPrices(Array.isArray(priceData) ? priceData : []);
+      })
       .catch(() => {});
   }, [request]);
 
@@ -89,6 +147,7 @@ export default function POSModule() {
         <CheckoutTab
           tills={tills}
           products={products}
+          prices={prices}
           resumeTicketId={resumeTicketId}
           onResumeHandled={() => setResumeTicketId(null)}
           onTillsChanged={fetchTills}
@@ -270,8 +329,8 @@ function BasketQtyInput({ value, isWeight, disabled, onCommit }) {
   );
 }
 
-function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTillsChanged }) {
-  const { request } = useApi();
+function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled, onTillsChanged }) {
+  const { request, apiBase } = useApi();
   const barcodeRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -304,6 +363,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
 
   // Barcode scan
   const [barcodeValue, setBarcodeValue] = useState("");
+  const [scannerModalOpen, setScannerModalOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState(null);
   const [lastScan, setLastScan] = useState(null); // visual confirmation chip
@@ -316,6 +376,7 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
   const [productSearch, setProductSearch] = useState("");
   const [unitFilter, setUnitFilter] = useState("ALL"); // ALL | EACH | WEIGHT
   const [addingProductId, setAddingProductId] = useState(null);
+  const [variantFamily, setVariantFamily] = useState(null);
 
   // Complete
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -333,6 +394,22 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
   const [countedCash, setCountedCash] = useState("");
   const [closing, setClosing] = useState(false);
   const [closeMsg, setCloseMsg] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+
+  const pushAlert = useCallback((text) => {
+    if (!text) return;
+    const id = `${Date.now()}-${Math.random()}`;
+    setAlerts((current) => [...current, { id, text }].slice(-4));
+    window.setTimeout(() => {
+      setAlerts((current) => current.filter((alert) => alert.id !== id));
+    }, 6000);
+  }, []);
+
+  useEffect(() => {
+    [sessionMsg, transactionMsg, scanMsg, phonePairingMsg, closeMsg]
+      .filter((message) => message && message.ok === false)
+      .forEach((message) => pushAlert(message.text));
+  }, [sessionMsg, transactionMsg, scanMsg, phonePairingMsg, closeMsg, pushAlert]);
 
   const netTotal = lines.reduce((sum, l) => sum + parseMoney(l.netPrice ?? l.linePrice), 0);
   const vatTotal = netTotal * POS_VAT_RATE / 100;
@@ -805,8 +882,28 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
     });
   }, [products, productSearch, unitFilter]);
 
+  const productGroups = useMemo(() => {
+    const grouped = new Map();
+    filteredProducts.forEach((product) => {
+      const family = productFamily(product);
+      const key = family || `product:${product.id}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(product);
+    });
+    return [...grouped.entries()].map(([key, group]) => ({
+      key,
+      family: !key.startsWith("product:") ? key : null,
+      products: group,
+    }));
+  }, [filteredProducts]);
+
+  const priceByProductId = useMemo(() => new Map(
+    prices.map((price) => [price.productId, price.unitPrice])
+  ), [prices]);
+
   return (
     <div className="pos-layout">
+      <PosAlertStack alerts={alerts} onDismiss={(id) => setAlerts((current) => current.filter((alert) => alert.id !== id))} />
       {/* Stepper */}
       <div className="pos-stepper">
         <Step n={1} active={step === 1} done={step > 1} label="Open drawer" icon={<Lock size={14} />} />
@@ -822,128 +919,20 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
         {/* LEFT COLUMN */}
         <div className="pos-col pos-col-left">
           {/* Drawer */}
-          <Panel title="Cash drawer" icon={sessionOpen ? <Unlock size={16} /> : <Lock size={16} />}>
-            <Message ok={sessionMsg?.ok} text={sessionMsg?.text} />
-            <div className={`drawer-state ${sessionOpen ? "is-open" : "is-closed"}`}>
-              <div className="drawer-state-icon">
-                {sessionOpen ? <Unlock size={22} /> : <Lock size={22} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="drawer-state-label">{sessionOpen ? "Drawer open" : "Drawer closed"}</div>
-                <div className="drawer-state-meta">
-                  {sessionOpen
-                    ? <>Session <code>{session.id.slice(0, 8)}</code> · Expected {formatMoney(session.expectedCash)}</>
-                    : "Open the drawer to start accepting payments."}
-                </div>
-              </div>
-            </div>
-            {!sessionOpen && (
-              <button
-                className="btn btn-primary"
-                onClick={() => { setSessionMsg(null); setSessionModal("open"); }}
-                style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
-              >
-                <Unlock size={14} /> Open drawer
-              </button>
-            )}
-            {sessionOpen && !transactionId && (
-              <div className="action-stack" style={{ marginTop: 12 }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleStartTransaction}
-                  disabled={startingTx}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  {startingTx ? "Starting…" : "Start new sale"} <ArrowRight size={14} />
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => { setCloseMsg(null); setSessionModal("close"); }}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <Lock size={14} /> Close drawer
-                </button>
-              </div>
-            )}
-            {sessionOpen && transactionId && !completed && (
-              <button
-                className="btn"
-                onClick={() => { setCloseMsg(null); setSessionModal("close"); }}
-                style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
-              >
-                <Lock size={14} /> Close drawer
-              </button>
-            )}
-          </Panel>
+          <div className="pos-action-bar">
+            {!sessionOpen && <button className="btn btn-primary" onClick={() => { setSessionMsg(null); setSessionModal("open"); }}><Unlock size={14} /> Open drawer</button>}
+            {sessionOpen && !transactionId && <button className="btn btn-primary" onClick={handleStartTransaction} disabled={startingTx}><Receipt size={14} /> {startingTx ? "Starting…" : "Start sale"}</button>}
+            {sessionOpen && <button className="btn" onClick={() => { setCloseMsg(null); setSessionModal("close"); }}><Lock size={14} /> Close drawer</button>}
+            {transactionId && !completed && <button className="btn" onClick={() => setScannerModalOpen(true)}><Barcode size={14} /> Scan barcode</button>}
+            {transactionId && !completed && <button className="btn" onClick={handleOpenPhoneScanner} disabled={phonePairingLoading}><Smartphone size={14} /> {phonePairingLoading ? "Pairing…" : "Use phone"}</button>}
+          </div>
 
           {/* Scanner */}
-          {transactionId && !completed && (
-            <Panel
-              title="Scan barcode"
-              icon={<Barcode size={16} />}
-              right={
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleOpenPhoneScanner}
-                  disabled={phonePairingLoading}
-                  style={{ padding: "5px 9px" }}
-                >
-                  <Smartphone size={14} /> {phonePairingLoading ? "Pairing…" : phonePairing ? "Show phone QR" : "Use phone"}
-                </button>
-              }
-            >
-              <Message ok={scanMsg?.ok} text={scanMsg?.text} />
-              <form onSubmit={handleBarcodeScan} className="scanner-form">
-                <div className="scanner-input-wrap">
-                  <Barcode size={18} className="scanner-icon" />
-                  <input
-                    ref={barcodeRef}
-                    type="text"
-                    value={barcodeValue}
-                    onChange={(e) => setBarcodeValue(e.target.value)}
-                    placeholder="Scan or type barcode, then press Enter"
-                    autoFocus
-                    disabled={scanning}
-                    aria-label="Barcode"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={scanning || !barcodeValue.trim()}
-                  style={{ justifyContent: "center" }}
-                >
-                  <ScanLine size={14} /> {scanning ? "Adding…" : "Add"}
-                </button>
-              </form>
-              {lastScan && (
-                <div className="scanner-flash">
-                  <CheckCircle2 size={14} /> Added {lastScan.qty}{" "}
-                  {lastScan.unit === "kg" ? "kg" : "×"} {lastScan.name}
-                </div>
-              )}
-              {phonePairing && (
-                <div className="phone-pairing-status">
-                  <div>
-                    <Smartphone size={14} />
-                    <span><strong>Phone scanner paired</strong><small>Scans will appear in this ticket automatically.</small></span>
-                  </div>
-                  <div className="phone-pairing-status-actions">
-                    <button type="button" className="btn btn-small" onClick={() => setPhonePairingOpen(true)}>Show QR</button>
-                    <button type="button" className="btn btn-small btn-danger" onClick={disconnectPhoneScanner}>Disconnect</button>
-                  </div>
-                </div>
-              )}
-              <div className="scanner-hint">
-                Tip: hold the scanner over the barcode and the cursor will stay here.
-              </div>
-            </Panel>
-          )}
+          {phonePairing && <div className="phone-pairing-status pos-phone-status"> <Smartphone size={14} /><span><strong>Phone scanner paired</strong><small>Scans appear in this ticket.</small></span><button type="button" className="btn btn-small" onClick={() => setPhonePairingOpen(true)}>Show QR</button><button type="button" className="btn btn-small btn-danger" onClick={disconnectPhoneScanner}>Disconnect</button></div>}
 
           {/* Totals & payment */}
           {transactionId && (
-            <Panel title="Payment" icon={<CircleDollarSign size={16} />}>
+            <Panel title="Payment" icon={<CircleDollarSign size={16} />} className="pos-payment-panel">
               <Message ok={transactionMsg?.ok} text={transactionMsg?.text} />
               <div className="totals-card">
                 <div className="totals-row">
@@ -1147,25 +1136,42 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
                 <Empty>No products match.</Empty>
               ) : (
                 <div className="product-grid">
-                  {filteredProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`product-tile ${addingProductId === p.id ? "is-busy" : ""}`}
-                      onClick={() => handleQuickAdd(p)}
-                      disabled={scanning}
-                      title={`${p.name} · ${p.sku}`}
-                    >
-                      <div className="product-tile-name">{p.name}</div>
-                      <div className="product-tile-meta">
-                        <span className="product-tile-sku">{p.sku}</span>
-                        <Chip>{p.unitType === "WEIGHT" ? "kg" : "each"}</Chip>
-                      </div>
-                      <div className="product-tile-add">
-                        <Plus size={14} /> {p.unitType === "WEIGHT" ? "0.1 kg" : "×1"}
-                      </div>
-                    </button>
-                  ))}
+                  {productGroups.map((group) => {
+                    const product = group.products[0];
+                    const hasVariants = Boolean(group.family);
+                    return (
+                      <button
+                        key={group.key}
+                        type="button"
+                        className={`product-tile ${hasVariants ? "has-variants" : ""} ${addingProductId === product.id ? "is-busy" : ""}`}
+                        onClick={() => (hasVariants ? setVariantFamily(group) : handleQuickAdd(product))}
+                        disabled={scanning}
+                        title={hasVariants ? `Choose a ${group.family} variant` : `${product.name} · ${product.sku}`}
+                      >
+                        <div className="product-image-frame">
+                          <div className="product-art" aria-hidden="true">{productGlyph(product)}</div>
+                          <img
+                            src={productImage(product, apiBase)}
+                            alt=""
+                            loading="lazy"
+                            onError={(event) => { event.currentTarget.style.display = "none"; }}
+                          />
+                          {hasVariants && <span className="variant-count">{group.products.length} options</span>}
+                        </div>
+                        <div className="product-tile-name">{group.family || product.name}</div>
+                        {!hasVariants && (
+                          <div className="product-tile-meta">
+                            <span className="product-tile-sku">{product.sku}</span>
+                            <Chip>{product.unitType === "WEIGHT" ? "kg" : "each"}</Chip>
+                          </div>
+                        )}
+                        <div className="product-tile-footer">
+                          <strong>{hasVariants ? "Choose variant" : formatMoney(priceByProductId.get(product.id) || 0)}</strong>
+                          {hasVariants ? <ChevronRight size={15} /> : <Plus size={14} />}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </Panel>
@@ -1273,6 +1279,31 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
       </div>
 
       {/* Modals */}
+      {scannerModalOpen && transactionId && !completed && (
+        <Modal title="Scan barcode" icon={<Barcode size={16} />} onClose={() => setScannerModalOpen(false)}>
+          <Message ok={scanMsg?.ok} text={scanMsg?.text} />
+          <form onSubmit={(event) => { handleBarcodeScan(event); setScannerModalOpen(false); }} className="scanner-form">
+            <div className="scanner-input-wrap">
+              <Barcode size={18} className="scanner-icon" />
+              <input
+                ref={barcodeRef}
+                type="text"
+                value={barcodeValue}
+                onChange={(event) => setBarcodeValue(event.target.value)}
+                placeholder="Scan or type barcode"
+                autoFocus
+                disabled={scanning}
+                aria-label="Barcode"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={scanning || !barcodeValue.trim()}>
+              <ScanLine size={14} /> {scanning ? "Adding…" : "Add"}
+            </button>
+          </form>
+          {lastScan && <div className="scanner-flash"><CheckCircle2 size={14} /> Added {lastScan.qty} {lastScan.unit === "kg" ? "kg" : "×"} {lastScan.name}</div>}
+        </Modal>
+      )}
+
       {phonePairing && phonePairingOpen && (
         <Modal title="Pair phone scanner" icon={<Smartphone size={16} />} onClose={hidePhoneScanner}>
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 0 }}>
@@ -1301,6 +1332,41 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
           <Message ok={phonePairingMsg?.ok} text={phonePairingMsg?.text} />
           <div className="modal-actions">
             <button type="button" className="btn btn-primary" onClick={hidePhoneScanner}>Done</button>
+          </div>
+        </Modal>
+      )}
+
+      {variantFamily && (
+        <Modal
+          title={variantFamily.family}
+          icon={<ShoppingBag size={16} />}
+          onClose={() => setVariantFamily(null)}
+        >
+          <p className="variant-picker-help">Choose the exact product and price to add to this ticket.</p>
+          <div className="variant-list">
+            {variantFamily.products.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className="variant-option"
+                onClick={() => {
+                  setVariantFamily(null);
+                  handleQuickAdd(product);
+                }}
+                disabled={scanning}
+              >
+                <div className="variant-option-image">
+                  <div className="product-art" aria-hidden="true">{productGlyph(product)}</div>
+                  <img src={productImage(product, apiBase)} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                </div>
+                <span className="variant-option-copy">
+                  <strong>{product.name}</strong>
+                  <small>{product.sku} · {product.unitType === "WEIGHT" ? "sold by kg" : "sold by unit"}</small>
+                </span>
+                <strong className="variant-option-price">{formatMoney(priceByProductId.get(product.id) || 0)}</strong>
+                <ChevronRight size={16} />
+              </button>
+            ))}
           </div>
         </Modal>
       )}
@@ -1369,6 +1435,13 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
 
       <style>{`
         .pos-layout { display: flex; flex-direction: column; gap: 18px; }
+        .pos-alert-stack { position: fixed; top: 18px; right: 24px; z-index: 120; display: flex; flex-direction: column; gap: 8px; width: min(420px, calc(100vw - 32px)); }
+        .pos-alert { display: flex; align-items: flex-start; gap: 9px; padding: 12px 12px 12px 14px; border: 1px solid #E5B5A8; border-left: 4px solid var(--red); border-radius: 9px; background: #FFF9F7; color: var(--red); box-shadow: 0 10px 28px rgba(27,33,25,.16); font-size: 13px; line-height: 1.4; animation: pos-alert-in .18s ease-out; }
+        .pos-alert > svg { flex: 0 0 auto; margin-top: 1px; }
+        .pos-alert span { flex: 1; min-width: 0; }
+        .pos-alert-close { display: inline-grid; place-items: center; flex: 0 0 auto; padding: 2px; border: 0; border-radius: 5px; background: transparent; color: currentColor; cursor: pointer; }
+        .pos-alert-close:hover { background: var(--red-bg); }
+        @keyframes pos-alert-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Stepper */
         .pos-stepper {
@@ -1392,9 +1465,15 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
         .step.done .step-circle { background: var(--green-deep); border-color: var(--green-deep); color: #fff; }
 
         /* Layout */
-        .pos-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 20px; align-items: start; }
+        .pos-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
         .pos-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-        @media (max-width: 1080px) { .pos-grid { grid-template-columns: 1fr; } }
+        .pos-col-left, .pos-col-right { display: contents; }
+        .pos-col-left > .panel, .pos-col-right > .panel { grid-column: 2; }
+        .pos-payment-panel { grid-column: 1 !important; grid-row: 1 / span 4; position: sticky; top: 20px; align-self: start; }
+        .pos-action-bar { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; }
+        .pos-action-bar .btn { flex: 1 1 145px; justify-content: center; }
+        .pos-phone-status { grid-column: 2; margin: 0; }
+        @media (max-width: 1080px) { .pos-grid { grid-template-columns: 1fr; } .pos-col-left, .pos-col-right { display: flex; } .pos-col-left > .panel, .pos-col-right > .panel, .pos-payment-panel, .pos-action-bar, .pos-phone-status { grid-column: auto !important; grid-row: auto; } .pos-payment-panel { position: static; order: -1; } }
 
         /* Drawer state block */
         .drawer-state {
@@ -1527,30 +1606,41 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
 
         .product-grid {
           display: grid; gap: 10px;
-          grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-          max-height: 360px; overflow: auto; padding-right: 4px;
+          grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+          max-height: 520px; overflow: auto; padding: 2px 4px 4px 2px;
         }
         .product-tile {
           text-align: left;
-          padding: 12px; border-radius: 10px;
+          min-height: 238px; padding: 9px; border-radius: 12px;
           background: var(--surface);
           border: 1px solid var(--hairline);
           cursor: pointer;
           display: flex; flex-direction: column; gap: 6px;
           font-family: 'Inter', sans-serif; color: var(--ink);
-          transition: border-color 0.12s, transform 0.12s;
+          transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
         }
-        .product-tile:hover:not(:disabled) { border-color: var(--green); transform: translateY(-1px); }
+        .product-tile:hover:not(:disabled) { border-color: var(--green); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(31,72,48,.10); }
         .product-tile:disabled { opacity: 0.6; cursor: not-allowed; }
         .product-tile.is-busy { border-color: var(--green); background: #E4EFE3; }
-        .product-tile-name { font-weight: 600; font-size: 13.5px; line-height: 1.25; }
+        .product-tile.has-variants { border-color: #C6D7C5; background: #FBFDF9; }
+        .product-image-frame, .variant-option-image {
+          position: relative; overflow: hidden; display: grid; place-items: center;
+          background: #E9EFE7; border-radius: 9px; isolation: isolate;
+        }
+        .product-image-frame { height: 124px; margin-bottom: 8px; }
+        .product-image-frame::after, .variant-option-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.18), transparent 55%); pointer-events: none; }
+        .product-image-frame img, .variant-option-image img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+        .product-art { position: relative; z-index: 0; font-size: 46px; filter: drop-shadow(0 5px 5px rgba(31,72,48,.15)); }
+        .variant-count { position: absolute; z-index: 2; right: 7px; bottom: 7px; padding: 4px 7px; border-radius: 999px; background: var(--green-deep); color: #fff; font-size: 10px; font-weight: 700; }
+        .product-tile-name { min-height: 34px; font-weight: 700; font-size: 13.5px; line-height: 1.25; }
         .product-tile-meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
         .product-tile-sku { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
-        .product-tile-add {
+        .product-tile-footer {
           margin-top: auto;
-          display: inline-flex; align-items: center; gap: 4px;
-          font-size: 12px; font-weight: 600; color: var(--green-deep);
+          display: flex; align-items: center; justify-content: space-between; gap: 4px;
+          font-size: 12px; color: var(--green-deep);
         }
+        .product-tile-footer strong { font-family: 'Space Grotesk', sans-serif; font-size: 14px; }
 
         /* Basket */
         .empty-sale-state {
@@ -1605,6 +1695,22 @@ function CheckoutTab({ tills, products, resumeTicketId, onResumeHandled, onTills
           margin-top: 2px; color: var(--ink-soft); font-size: 12px;
         }
 
+        .variant-picker-help { margin: -4px 0 14px; color: var(--ink-soft); font-size: 13px; }
+        .variant-list { display: flex; flex-direction: column; gap: 8px; }
+        .variant-option {
+          display: grid; grid-template-columns: 52px minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+          width: 100%; padding: 7px; text-align: left; color: var(--ink);
+          background: var(--surface); border: 1px solid var(--hairline); border-radius: 9px; cursor: pointer;
+        }
+        .variant-option:hover:not(:disabled) { border-color: var(--green); background: #FBFDF9; }
+        .variant-option:disabled { opacity: .6; cursor: default; }
+        .variant-option-image { width: 52px; height: 52px; }
+        .variant-option-image .product-art { font-size: 27px; }
+        .variant-option-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .variant-option-copy strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+        .variant-option-copy small { color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+        .variant-option-price { font-family: 'Space Grotesk', sans-serif; font-size: 13px; white-space: nowrap; }
+
         /* Reconcile modal */
         .reconcile-card {
           display: grid; gap: 6px; padding: 12px;
@@ -1628,6 +1734,23 @@ function Step({ n, active, done, label, icon }) {
     <div className={`step ${active ? "active" : ""} ${done ? "done" : ""}`}>
       <span className="step-circle">{done ? <CheckCircle2 size={14} /> : n}</span>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>{icon} {label}</span>
+    </div>
+  );
+}
+
+function PosAlertStack({ alerts, onDismiss }) {
+  if (!alerts.length) return null;
+  return (
+    <div className="pos-alert-stack" role="alert" aria-live="assertive">
+      {alerts.map((alert) => (
+        <div key={alert.id} className="pos-alert">
+          <AlertTriangle size={17} />
+          <span>{alert.text}</span>
+          <button type="button" className="pos-alert-close" onClick={() => onDismiss(alert.id)} aria-label="Dismiss alert">
+            <X size={15} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

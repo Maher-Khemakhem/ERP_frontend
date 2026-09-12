@@ -8,6 +8,7 @@ export default function InventoryModule() {
   const [tab, setTab] = useState("products");
 
   const [products, setProducts] = useState([]);
+  const [families, setFamilies] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState("");
 
@@ -25,9 +26,19 @@ export default function InventoryModule() {
     }
   }, [request]);
 
+  const fetchFamilies = useCallback(async () => {
+    try {
+      const data = await request("/api/inventory/product-families");
+      setFamilies(Array.isArray(data) ? data : []);
+    } catch {
+      setFamilies([]);
+    }
+  }, [request]);
+
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchFamilies();
+  }, [fetchFamilies, fetchProducts]);
 
   return (
     <div>
@@ -57,7 +68,7 @@ export default function InventoryModule() {
       </div>
 
       {tab === "products" && (
-        <ProductsTab products={products} loading={productsLoading} error={productsError} onRefresh={fetchProducts} onCreated={fetchProducts} />
+        <ProductsTab products={products} families={families} loading={productsLoading} error={productsError} onRefresh={fetchProducts} onCreated={() => { fetchProducts(); fetchFamilies(); }} />
       )}
       {tab === "receive" && <ReceiveTab products={products} />}
       {tab === "stock" && <StockTab products={products} />}
@@ -65,13 +76,18 @@ export default function InventoryModule() {
   );
 }
 
-function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
+function ProductsTab({ products, families, loading, error, onRefresh, onCreated }) {
   const { request } = useApi();
-  const [form, setForm] = useState({ sku: "", name: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+  const [form, setForm] = useState({ sku: "", name: "", familyId: "", imageUrl: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+  const [imageFile, setImageFile] = useState(null);
+  const [creatingFamily, setCreatingFamily] = useState(false);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState(null);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showFamilyForm, setShowFamilyForm] = useState(false);
+  const [familyForm, setFamilyForm] = useState({ name: "", imageUrl: "" });
+  const [familyImageFile, setFamilyImageFile] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
   const filteredProducts = useMemo(() => {
@@ -89,12 +105,16 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
     setCreating(true);
     setMsg(null);
     try {
+      let imageUrl = form.imageUrl.trim() || null;
+      if (imageFile) imageUrl = await uploadImage(imageFile);
       // POST /api/inventory/products -> { productId }
       await request("/api/inventory/products", {
         method: "POST",
         body: {
           sku: form.sku.trim(),
           name: form.name.trim(),
+          familyId: form.familyId || null,
+          imageUrl,
           unitType: form.unitType,
           perishable: form.perishable,
           reorderPoint: Number(form.reorderPoint) || 0,
@@ -102,7 +122,8 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
         },
       });
       setMsg({ ok: true, text: `Product "${form.name}" added.` });
-      setForm({ sku: "", name: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+      setForm({ sku: "", name: "", familyId: "", imageUrl: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+      setImageFile(null);
       setShowForm(false);
       onCreated();
     } catch (err) {
@@ -112,6 +133,37 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
     }
   }
 
+  async function handleCreateFamily(event) {
+    event.preventDefault();
+    if (!familyForm.name.trim()) return;
+    setCreatingFamily(true);
+    setMsg(null);
+    try {
+      let imageUrl = familyForm.imageUrl.trim() || null;
+      if (familyImageFile) imageUrl = await uploadImage(familyImageFile);
+      await request("/api/inventory/product-families", {
+        method: "POST",
+        body: { name: familyForm.name.trim(), imageUrl },
+      });
+      setFamilyForm({ name: "", imageUrl: "" });
+      setFamilyImageFile(null);
+      onCreated();
+      setShowFamilyForm(false);
+      setMsg({ ok: true, text: "Product family created." });
+    } catch (err) {
+      setMsg({ ok: false, text: err.message || "Could not create the family." });
+    } finally {
+      setCreatingFamily(false);
+    }
+  }
+
+  async function uploadImage(file) {
+    const body = new FormData();
+    body.append("file", file);
+    const result = await request("/api/inventory/product-images", { method: "POST", body });
+    return result.url;
+  }
+
   return (
     <div>
       <Panel
@@ -119,6 +171,7 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
         icon={<Boxes size={16} />}
         right={
           <div className="inventory-panel-actions">
+            <button className="btn btn-small" onClick={() => { setMsg(null); setShowFamilyForm(true); }}><Plus size={13} /> Add family</button>
             <button className="btn btn-primary btn-small" onClick={() => { setMsg(null); setShowForm(true); }}><Plus size={13} /> Add product</button>
             <button className="btn btn-small" onClick={onRefresh} disabled={loading}><RefreshCw size={13} /> Refresh</button>
           </div>
@@ -159,6 +212,7 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
               </button>
             </div>
             <div className="tag-meta">
+              {p.familyName && <Chip>{p.familyName}</Chip>}
               <Chip>{p.unitType}</Chip>
               <Chip>Reorder at {p.reorderPoint}</Chip>
               {p.perishable && (
@@ -177,7 +231,18 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
           <Message ok={msg?.ok} text={msg?.text} />
           <form onSubmit={handleSubmit}>
             <Field label="SKU"><input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" autoFocus /></Field>
-            <Field label="Name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Organic bananas" /></Field>
+            <Field label="Variant name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Safia 1.5L" /></Field>
+            <Field label="Product family (optional)">
+              <select value={form.familyId} onChange={(e) => setForm({ ...form, familyId: e.target.value })}>
+                <option value="">No family</option>
+                {families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Product image from computer (optional)">
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+              {imageFile && <span className="selected-file">{imageFile.name}</span>}
+            </Field>
+            <Field label="Or use an image URL (optional)"><input type="url" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://.../safia-water.jpg" /></Field>
             <Field label="Unit type">
               <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
                 <option value="EACH">Each (whole units)</option>
@@ -190,6 +255,35 @@ function ProductsTab({ products, loading, error, onRefresh, onCreated }) {
             <div className="modal-actions">
               <button type="button" className="btn" onClick={() => setShowForm(false)} disabled={creating}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Adding..." : "Add product"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showFamilyForm && (
+        <Modal title="Add a product family" icon={<Boxes size={16} />} onClose={() => !creatingFamily && setShowFamilyForm(false)}>
+          <Message ok={msg?.ok} text={msg?.text} />
+          <p className="family-form-intro">Create a top-level catalog card such as Water, Milk, or Soft drinks. Products can be assigned to it afterward.</p>
+          <form onSubmit={handleCreateFamily}>
+            <Field label="Family name">
+              <input type="text" value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="Water" autoFocus required />
+            </Field>
+            <Field label="Family image URL">
+              <input type="url" value={familyForm.imageUrl} onChange={(e) => setFamilyForm({ ...familyForm, imageUrl: e.target.value })} placeholder="https://example.com/water.jpg" />
+            </Field>
+            <Field label="Or choose an image from your computer">
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setFamilyImageFile(e.target.files?.[0] || null)} />
+              {familyImageFile && <span className="selected-file">{familyImageFile.name}</span>}
+            </Field>
+            {familyForm.imageUrl && (
+              <div className="family-image-preview">
+                <img src={familyForm.imageUrl} alt="Family preview" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <span>Preview</span>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={() => setShowFamilyForm(false)} disabled={creatingFamily}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={creatingFamily}>{creatingFamily ? "Creating..." : "Create family"}</button>
             </div>
           </form>
         </Modal>
@@ -434,6 +528,11 @@ const moduleStyles = `
   .inventory-search:focus-within { outline: 2px solid var(--green); outline-offset: 1px; }
   .inventory-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
   .inventory-result-count { flex-shrink: 0; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; }
+  .family-form-intro { margin: -4px 0 18px; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+  .family-image-preview { position: relative; overflow: hidden; height: 120px; margin: -2px 0 16px; border: 1px solid var(--hairline); border-radius: 8px; background: #E9EFE7; }
+  .family-image-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .family-image-preview span { position: absolute; left: 8px; bottom: 8px; padding: 4px 7px; border-radius: 5px; background: rgba(27,33,25,.72); color: #fff; font-size: 11px; }
+  .selected-file { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 12px; overflow-wrap: anywhere; }
   .stock-stat { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 2px; }
   .stock-num { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; color: var(--green-deep); }
   .stock-unit { font-size: 13px; color: var(--ink-soft); }

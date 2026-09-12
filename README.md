@@ -1,6 +1,6 @@
 # Supermarket ERP Frontend
 
-React/Vite web application for the supermarket ERP. The UI provides a dashboard and six active business modules: Inventory, Pricing, POS, Procurement, and Finance, plus the shared dashboard shell.
+React/Vite web application for the supermarket ERP. The UI provides a dashboard, five business modules (Inventory, Pricing, POS, Procurement, and Finance), and an admin-only Users screen.
 
 ## Requirements
 
@@ -77,7 +77,7 @@ src/
     └── finance/FinanceModule.jsx
 ```
 
-Each module calls the backend through `useApi()` and imports shared visual components from `design/`. The frontend does not maintain a separate domain store; screens load and mutate data through the REST API and refresh their local state after successful operations.
+Each module calls the backend through `useApi()` and imports shared visual components from `design/`. The frontend does not maintain a separate domain store; screens load and mutate data through the REST API and refresh their local state after successful operations. The dashboard and Users screen are shell-level views rather than additional business modules.
 
 ## API client behavior
 
@@ -122,7 +122,7 @@ If the API is hosted elsewhere, set `VITE_API_BASE_URL` or use the API base URL 
 
 ## Authentication and roles
 
-When the database has no users, the frontend displays a first-admin setup form. After that, users sign in with their username and password. The JWT is kept in browser local storage and sent as a bearer token on API requests; signing out removes it.
+When the database has no users, the frontend displays a first-admin setup form. After that, users sign in with their username and password. The JWT is kept in browser local storage and sent as a bearer token on API requests; signing out removes it. The installation uses one database and one store, with no store selection in the UI.
 
 The role-to-module visibility is:
 
