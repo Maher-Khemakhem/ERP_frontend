@@ -19,9 +19,37 @@ import {
   History,
   Tag,
   Check,
+  Package,
 } from "lucide-react";
 import { useApi } from "../../lib/apiClient.jsx";
 import { ShelfTag, Field, Chip, Panel, Message, Empty, Modal } from "../../design/components.jsx";
+
+function ProductThumb({ src, alt = "", size = 44, className = "" }) {
+  const [error, setError] = useState(false);
+
+  if (!src || error) {
+    return (
+      <div
+        className={`product-thumb-placeholder ${className}`.trim()}
+        style={{ width: size, height: size, minWidth: size }}
+        aria-hidden="true"
+      >
+        <Package size={Math.max(14, Math.round(size * 0.42))} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt || "Product image"}
+      className={`product-thumb-img ${className}`.trim()}
+      style={{ width: size, height: size, minWidth: size }}
+      onError={() => setError(true)}
+      loading="lazy"
+    />
+  );
+}
 
 export default function InventoryModule() {
   const { request } = useApi();
@@ -486,9 +514,12 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                     className={`modal-picker-item ${p.id === selectedProductId ? "selected" : ""}`}
                     onClick={() => handleSelectProduct(p)}
                   >
-                    <div className="picker-item-main">
-                      <span className="picker-item-name">{p.name}</span>
-                      <span className="picker-item-sku">SKU: {p.sku}</span>
+                    <div className="picker-item-left">
+                      <ProductThumb src={p.imageUrl || p.familyImageUrl} alt={p.name} size={36} />
+                      <div className="picker-item-main">
+                        <span className="picker-item-name">{p.name}</span>
+                        <span className="picker-item-sku">SKU: {p.sku}</span>
+                      </div>
                     </div>
                     <div className="picker-item-badges">
                       {p.familyName && <span className="mini-chip">{p.familyName}</span>}
@@ -503,11 +534,18 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
         ) : (
           <div className="modal-selected-product">
             <div className="selected-product-header">
-              <div>
-                <div className="selected-product-name">{selectedProduct.name}</div>
-                <div className="selected-product-sub">
-                  SKU: <strong>{selectedProduct.sku}</strong>
-                  {selectedProduct.familyName && ` · Category: ${selectedProduct.familyName}`}
+              <div className="selected-product-title-group">
+                <ProductThumb
+                  src={selectedProduct.imageUrl || selectedProduct.familyImageUrl}
+                  alt={selectedProduct.name}
+                  size={48}
+                />
+                <div>
+                  <div className="selected-product-name">{selectedProduct.name}</div>
+                  <div className="selected-product-sub">
+                    SKU: <strong>{selectedProduct.sku}</strong>
+                    {selectedProduct.familyName && ` · Category: ${selectedProduct.familyName}`}
+                  </div>
                 </div>
               </div>
               <button
@@ -923,9 +961,16 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               return (
                 <div key={product.id} className={`stock-card ${status.toLowerCase()}`}>
                   <div className="stock-card-top">
-                    <div>
-                      <div className="stock-card-name">{product.name}</div>
-                      <div className="stock-card-sku">SKU: {product.sku}</div>
+                    <div className="stock-card-product-info">
+                      <ProductThumb
+                        src={product.imageUrl || product.familyImageUrl}
+                        alt={product.name}
+                        size={44}
+                      />
+                      <div>
+                        <div className="stock-card-name">{product.name}</div>
+                        <div className="stock-card-sku">SKU: {product.sku}</div>
+                      </div>
                     </div>
                     {status === "OUT_OF_STOCK" ? (
                       <span className="stock-badge danger">Out of Stock</span>
@@ -1013,11 +1058,19 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
           {inspectStock && (
             <div className="lot-details-content">
               <div className="lot-summary-header">
-                <div>
-                  <div className="lot-product-sku">SKU: {inspectedProduct?.sku}</div>
-                  <div className="lot-total-stat">
-                    <strong>{inspectStock.totalQuantity}</strong>
-                    <span>{inspectedProduct?.unitType === "WEIGHT" ? "kg" : "units"} on hand</span>
+                <div className="lot-summary-product-info">
+                  <ProductThumb
+                    src={inspectedProduct?.imageUrl || inspectedProduct?.familyImageUrl}
+                    alt={inspectedProduct?.name}
+                    size={46}
+                  />
+                  <div>
+                    <div className="lot-product-name">{inspectedProduct?.name}</div>
+                    <div className="lot-product-sku">SKU: {inspectedProduct?.sku}</div>
+                    <div className="lot-total-stat">
+                      <strong>{inspectStock.totalQuantity}</strong>
+                      <span>{inspectedProduct?.unitType === "WEIGHT" ? "kg" : "units"} on hand</span>
+                    </div>
                   </div>
                 </div>
                 <button
@@ -1226,9 +1279,12 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
           {filteredProducts.map((p) => (
             <ShelfTag key={p.id}>
               <div className="tag-row">
-                <div>
-                  <div className="tag-name">{p.name}</div>
-                  <div className="tag-sku">{p.sku}</div>
+                <div className="tag-product-info">
+                  <ProductThumb src={p.imageUrl || p.familyImageUrl} alt={p.name} size={48} />
+                  <div>
+                    <div className="tag-name">{p.name}</div>
+                    <div className="tag-sku">{p.sku}</div>
+                  </div>
                 </div>
                 <div className="tag-row-actions">
                   <button
@@ -1390,6 +1446,14 @@ const moduleStyles = `
   .tag-row-actions { display: flex; align-items: center; gap: 6px; }
   .btn-ghost { background: transparent; border-color: var(--hairline); }
   .btn-ghost:hover { background: #F4F6F2; border-color: var(--hairline-strong); }
+
+  .product-thumb-img { border-radius: 8px; object-fit: cover; border: 1px solid var(--hairline); background: #fff; flex-shrink: 0; }
+  .product-thumb-placeholder { border-radius: 8px; border: 1px solid var(--hairline); background: #F1F4EE; color: var(--ink-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .tag-product-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .stock-card-product-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .lot-summary-product-info { display: flex; align-items: center; gap: 12px; }
+  .picker-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .selected-product-title-group { display: flex; align-items: center; gap: 12px; }
 
   /* RECEIVE MODAL STYLES */
   .receive-modal-body { display: flex; flex-direction: column; gap: 14px; }
