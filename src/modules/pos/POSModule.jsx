@@ -20,8 +20,6 @@ function formatMoney(value) {
   return `${n.toFixed(3)} TND`;
 }
 
-const POS_VAT_RATE = 19;
-
 const PRODUCT_IMAGE_URLS = {
   water: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=640&q=80",
   milk: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=640&q=80",
@@ -411,9 +409,22 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       .forEach((message) => pushAlert(message.text));
   }, [sessionMsg, transactionMsg, scanMsg, phonePairingMsg, closeMsg, pushAlert]);
 
-  const netTotal = lines.reduce((sum, l) => sum + parseMoney(l.netPrice ?? l.linePrice), 0);
-  const vatTotal = netTotal * POS_VAT_RATE / 100;
-  const total = netTotal + vatTotal;
+  const netTotal = lines.reduce((sum, l) => {
+    if (l.netPrice != null) return sum + parseMoney(l.netPrice);
+    if (l.linePrice != null && l.vatAmount != null) return sum + (parseMoney(l.linePrice) - parseMoney(l.vatAmount));
+    return sum + parseMoney(l.linePrice);
+  }, 0);
+  const vatTotal = lines.reduce((sum, l) => {
+    if (l.vatAmount != null) return sum + parseMoney(l.vatAmount);
+    if (l.linePrice != null && l.netPrice != null) return sum + (parseMoney(l.linePrice) - parseMoney(l.netPrice));
+    const product = products.find((p) => p.id === l.productId);
+    const rate = product?.vatRate != null ? Number(product.vatRate) : 0;
+    return sum + (parseMoney(l.netPrice ?? l.linePrice) * (rate / 100));
+  }, 0);
+  const total = lines.reduce((sum, l) => {
+    if (l.linePrice != null) return sum + parseMoney(l.linePrice);
+    return sum + (parseMoney(l.netPrice) + parseMoney(l.vatAmount));
+  }, 0);
   const itemCount = lines.length;
   const tenderedNum = parseMoney(tendered);
   const changeDue = paymentMethod === "CASH" ? Math.max(0, tenderedNum - total) : 0;
@@ -1163,6 +1174,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                           <div className="product-tile-meta">
                             <span className="product-tile-sku">{product.sku}</span>
                             <Chip>{product.unitType === "WEIGHT" ? "kg" : "each"}</Chip>
+                            {product.vatRate != null && <Chip>VAT {product.vatRate}%</Chip>}
                           </div>
                         )}
                         <div className="product-tile-footer">
@@ -1215,6 +1227,9 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                         <div className="basket-line-sub">
                           <span className="basket-line-sku">{product?.sku || ""}</span>
                           <span className="basket-line-unitprice">{formatMoney(unitPrice)} / {isWeight ? "kg" : "unit"}</span>
+                          {product?.vatRate != null && (
+                            <span className="basket-line-vat">· VAT {product.vatRate}%</span>
+                          )}
                         </div>
                       </div>
                       <div className="qty-stepper">
@@ -1943,7 +1958,7 @@ function printReceipt(ticket, products = []) {
   const vatTotal = parseMoney(ticket.vatTotal);
   const netTotal = ticket.netTotal == null ? grossTotal - vatTotal : parseMoney(ticket.netTotal);
 
-  receipt.document.write(`<!doctype html><html><head><title>Receipt ${ticketIdShort}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0 0 4px}p{text-align:center;font-size:11px;margin:4px 0 16px}table{width:100%;border-collapse:collapse;font-size:11px}th{font-size:10px;text-align:left;padding:4px 0;border-bottom:1px solid #111}td{padding:5px 0;border-bottom:1px dashed #bbb;vertical-align:top}.amount{text-align:right}.summary{width:100%;font-size:11px;margin-top:10px}.summary td{border:0;padding:3px 0}.summary .grand td{font-weight:bold;font-size:14px;border-top:2px solid #111;padding-top:8px}.footer{text-align:center;margin-top:22px;font-size:11px}</style></head><body><h1>SUPERMARKET</h1><p>Ticket ${ticketIdFull}<br>${formatDate(ticket.completedAt || ticket.startedAt)}<br>Payment: ${paymentMethod}</p><table><thead><tr><th>Qty</th><th>Item</th><th class="amount">Unit</th><th class="amount">Total</th></tr></thead><tbody>${lines}</tbody></table><table class="summary"><tr><td>Subtotal (excl. VAT)</td><td class="amount">${netTotal.toFixed(3)} TND</td></tr><tr><td>VAT (${POS_VAT_RATE}%)</td><td class="amount">${vatTotal.toFixed(3)} TND</td></tr><tr class="grand"><td>TOTAL (incl. VAT)</td><td class="amount">${grossTotal.toFixed(3)} TND</td></tr></table><p class="footer">Thank you for your visit</p></body></html>`);
+  receipt.document.write(`<!doctype html><html><head><title>Receipt ${ticketIdShort}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0 0 4px}p{text-align:center;font-size:11px;margin:4px 0 16px}table{width:100%;border-collapse:collapse;font-size:11px}th{font-size:10px;text-align:left;padding:4px 0;border-bottom:1px solid #111}td{padding:5px 0;border-bottom:1px dashed #bbb;vertical-align:top}.amount{text-align:right}.summary{width:100%;font-size:11px;margin-top:10px}.summary td{border:0;padding:3px 0}.summary .grand td{font-weight:bold;font-size:14px;border-top:2px solid #111;padding-top:8px}.footer{text-align:center;margin-top:22px;font-size:11px}</style></head><body><h1>SUPERMARKET</h1><p>Ticket ${ticketIdFull}<br>${formatDate(ticket.completedAt || ticket.startedAt)}<br>Payment: ${paymentMethod}</p><table><thead><tr><th>Qty</th><th>Item</th><th class="amount">Unit</th><th class="amount">Total</th></tr></thead><tbody>${lines}</tbody></table><table class="summary"><tr><td>Subtotal (excl. VAT)</td><td class="amount">${netTotal.toFixed(3)} TND</td></tr><tr><td>VAT</td><td class="amount">${vatTotal.toFixed(3)} TND</td></tr><tr class="grand"><td>TOTAL (incl. VAT)</td><td class="amount">${grossTotal.toFixed(3)} TND</td></tr></table><p class="footer">Thank you for your visit</p></body></html>`);
   receipt.document.close();
   receipt.focus();
   receipt.onload = () => receipt.print();
