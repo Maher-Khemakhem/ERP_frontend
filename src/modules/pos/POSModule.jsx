@@ -59,7 +59,7 @@ function productImage(product, apiBase) {
   return PRODUCT_IMAGE_URLS.generic;
 }
 
-function productGlyph(product) {
+function legacyProductGlyph(product) {
   const name = String(product?.name || "").toLowerCase();
   if (name.includes("water") || name.includes("eau")) return "💧";
   if (name.includes("milk") || name.includes("lait")) return "🥛";
@@ -68,6 +68,11 @@ function productGlyph(product) {
   if (name.includes("vegetable") || name.includes("tomato") || name.includes("tomate")) return "🥬";
   if (name.includes("coffee") || name.includes("cafe")) return "☕";
   return "🛍️";
+}
+
+function productGlyph(product) {
+  const name = String(product?.name || "?").trim();
+  return name ? name.slice(0, 1).toUpperCase() : "?";
 }
 
 function escapeHtml(str) {
@@ -1112,7 +1117,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         <div className="pos-col pos-col-right">
           {/* Product browser — only when a sale is active and not yet completed */}
           {transactionId && !completed && (
-            <Panel title="Products" icon={<PackageSearch size={16} />}>
+            <Panel title="Products" icon={<PackageSearch size={16} />} className="pos-product-panel">
               <div className="browser-controls">
                 <div className="scanner-input-wrap" style={{ flex: 1 }}>
                   <Search size={16} className="scanner-icon" />
@@ -1193,6 +1198,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
           <Panel
             title={transactionId ? `Basket · ${lines.length} item${lines.length === 1 ? "" : "s"}` : "Basket"}
             icon={<ShoppingCart size={16} />}
+            className="pos-basket-panel"
           >
             {!transactionId && (
               <div className="empty-sale-state">

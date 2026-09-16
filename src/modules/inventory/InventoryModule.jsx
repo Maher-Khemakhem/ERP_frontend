@@ -19,6 +19,7 @@ import {
   History,
   Tag,
   Check,
+  ImagePlus,
   Package,
 } from "lucide-react";
 import { useApi } from "../../lib/apiClient.jsx";
@@ -1167,7 +1168,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
 // ---------------------------------------------------------------------------
 function ProductsTab({ products, families, loading, error, onRefresh, onCreated, onOpenReceive, onViewStock }) {
   const { request } = useApi();
-  const [form, setForm] = useState({ sku: "", name: "", familyId: "", imageUrl: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+  const [form, setForm] = useState({ sku: "", name: "", familyId: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
   const [imageFile, setImageFile] = useState(null);
   const [creatingFamily, setCreatingFamily] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -1175,7 +1176,7 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showFamilyForm, setShowFamilyForm] = useState(false);
-  const [familyForm, setFamilyForm] = useState({ name: "", imageUrl: "" });
+  const [familyForm, setFamilyForm] = useState({ name: "" });
   const [familyImageFile, setFamilyImageFile] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -1194,8 +1195,7 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
     setCreating(true);
     setMsg(null);
     try {
-      let imageUrl = form.imageUrl.trim() || null;
-      if (imageFile) imageUrl = await uploadImage(imageFile);
+      const imageUrl = imageFile ? await uploadImage(imageFile) : null;
       await request("/api/inventory/products", {
         method: "POST",
         body: {
@@ -1210,7 +1210,7 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
         },
       });
       setMsg({ ok: true, text: `Product "${form.name}" added.` });
-      setForm({ sku: "", name: "", familyId: "", imageUrl: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
+      setForm({ sku: "", name: "", familyId: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
       setImageFile(null);
       setShowForm(false);
       onCreated();
@@ -1223,17 +1223,23 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
 
   async function handleCreateFamily(event) {
     event.preventDefault();
-    if (!familyForm.name.trim()) return;
+    if (!familyForm.name.trim()) {
+      setMsg({ ok: false, text: "A family name is required." });
+      return;
+    }
+    if (!familyImageFile) {
+      setMsg({ ok: false, text: "Choose an image from your PC before creating the family." });
+      return;
+    }
     setCreatingFamily(true);
     setMsg(null);
     try {
-      let imageUrl = familyForm.imageUrl.trim() || null;
-      if (familyImageFile) imageUrl = await uploadImage(familyImageFile);
+      const imageUrl = await uploadImage(familyImageFile);
       await request("/api/inventory/product-families", {
         method: "POST",
         body: { name: familyForm.name.trim(), imageUrl },
       });
-      setFamilyForm({ name: "", imageUrl: "" });
+      setFamilyForm({ name: "" });
       setFamilyImageFile(null);
       onCreated();
       setShowFamilyForm(false);
@@ -1250,6 +1256,13 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
     body.append("file", file);
     const result = await request("/api/inventory/product-images", { method: "POST", body });
     return result.url;
+  }
+
+  function closeFamilyForm() {
+    if (creatingFamily) return;
+    setShowFamilyForm(false);
+    setFamilyForm({ name: "" });
+    setFamilyImageFile(null);
   }
 
   return (
@@ -1347,30 +1360,40 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
       {showForm && (
         <Modal title="Add a product" icon={<Plus size={16} />} onClose={() => !creating && setShowForm(false)}>
           <Message ok={msg?.ok} text={msg?.text} />
-          <form onSubmit={handleSubmit}>
-            <Field label="SKU"><input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" autoFocus /></Field>
-            <Field label="Variant name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Safia 1.5L" /></Field>
+          <form className="product-form" onSubmit={handleSubmit}>
+            <div className="product-basic-grid">
+              <Field label="SKU"><input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" autoFocus /></Field>
+              <Field label="Variant name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Safia 1.5L" /></Field>
+            </div>
             <Field label="Product family (optional)">
               <select value={form.familyId} onChange={(e) => setForm({ ...form, familyId: e.target.value })}>
                 <option value="">No family</option>
                 {families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
               </select>
             </Field>
-            <Field label="Product image from computer (optional)">
-              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+            <div className="product-image-source">
+              <div className="family-upload-field product-image-upload-field">
+                <span className="field-label">Product image from your PC <em>Optional</em></span>
+                <input id="product-image-upload" className="family-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                <label htmlFor="product-image-upload" className="family-upload-control">
+                  <span className="family-upload-icon"><ImagePlus size={18} aria-hidden="true" /></span>
+                  <span><strong>{imageFile ? "Replace image" : "Choose an image from your PC"}</strong><small>PNG, JPG, WEBP or GIF</small></span>
+                </label>
+              </div>
               {imageFile && <span className="selected-file">{imageFile.name}</span>}
-            </Field>
-            <Field label="Or use an image URL (optional)"><input type="url" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://.../safia-water.jpg" /></Field>
-            <Field label="Unit type">
-              <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
-                <option value="EACH">Each (whole units)</option>
-                <option value="WEIGHT">Weight (kg)</option>
-              </select>
-            </Field>
-            <Field label="Reorder point"><input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} /></Field>
-            <Field label="VAT rate (%)"><input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} /></Field>
+            </div>
+            <div className="product-settings-grid">
+              <Field label="Unit type">
+                <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
+                  <option value="EACH">Each (whole units)</option>
+                  <option value="WEIGHT">Weight (kg)</option>
+                </select>
+              </Field>
+              <Field label="Reorder point"><input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} /></Field>
+              <Field label="VAT rate (%)"><input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} /></Field>
+            </div>
             <label className="checkbox-row"><input type="checkbox" checked={form.perishable} onChange={(e) => setForm({ ...form, perishable: e.target.checked })} /> This product is perishable</label>
-            <div className="modal-actions">
+            <div className="modal-actions product-modal-actions">
               <button type="button" className="btn" onClick={() => setShowForm(false)} disabled={creating}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Adding..." : "Add product"}</button>
             </div>
@@ -1379,28 +1402,27 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
       )}
 
       {showFamilyForm && (
-        <Modal title="Add a product family" icon={<Boxes size={16} />} onClose={() => !creatingFamily && setShowFamilyForm(false)}>
+        <Modal title="Add a product family" icon={<Boxes size={16} />} onClose={closeFamilyForm}>
           <Message ok={msg?.ok} text={msg?.text} />
-          <p className="family-form-intro">Create a top-level catalog category such as Water, Dairy, or Bakery. Products can be assigned to it afterward.</p>
-          <form onSubmit={handleCreateFamily}>
-            <Field label="Family name">
-              <input type="text" value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="Water" autoFocus required />
+          <form className="family-form" onSubmit={handleCreateFamily}>
+            <Field label="Family name" className="family-name-field">
+              <input type="text" value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="e.g. Water & soft drinks" autoFocus required />
             </Field>
-            <Field label="Family image URL">
-              <input type="url" value={familyForm.imageUrl} onChange={(e) => setFamilyForm({ ...familyForm, imageUrl: e.target.value })} placeholder="https://example.com/water.jpg" />
-            </Field>
-            <Field label="Or choose an image from your computer">
-              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setFamilyImageFile(e.target.files?.[0] || null)} />
-              {familyImageFile && <span className="selected-file">{familyImageFile.name}</span>}
-            </Field>
-            {familyForm.imageUrl && (
-              <div className="family-image-preview">
-                <img src={familyForm.imageUrl} alt="Family preview" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                <span>Preview</span>
+            <div className="family-image-layout">
+              <div className="family-image-fields">
+                <div className="family-upload-field">
+                  <span className="field-label">Family image <em>Required</em></span>
+                  <input id="family-image-upload" className="family-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setFamilyImageFile(e.target.files?.[0] || null)} />
+                  <label htmlFor="family-image-upload" className="family-upload-control">
+                    <span className="family-upload-icon"><ImagePlus size={18} aria-hidden="true" /></span>
+                    <span><strong>{familyImageFile ? "Replace image" : "Choose an image from your PC"}</strong><small>PNG, JPG, WEBP or GIF</small></span>
+                  </label>
+                  {familyImageFile && <span className="selected-file"><Check size={14} /> {familyImageFile.name}</span>}
+                </div>
               </div>
-            )}
-            <div className="modal-actions">
-              <button type="button" className="btn" onClick={() => setShowFamilyForm(false)} disabled={creatingFamily}>Cancel</button>
+            </div>
+            <div className="modal-actions family-modal-actions">
+              <button type="button" className="btn" onClick={closeFamilyForm} disabled={creatingFamily}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={creatingFamily}>{creatingFamily ? "Creating..." : "Create family"}</button>
             </div>
           </form>
