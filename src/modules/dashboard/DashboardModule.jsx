@@ -8,7 +8,7 @@ function formatTime(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  return date.toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 }
 
 function productName(products, productId) {
@@ -27,10 +27,10 @@ function SalesBars({ points, loading }) {
   return (
     <div className="sales-chart">
       <div className="sales-chart-summary">
-        <div><strong>{loading ? "—" : `${periodTotal.toFixed(3)} TND`}</strong><span>sales in the last 7 days</span></div>
+        <div><strong>{loading ? "—" : `${periodTotal.toFixed(3)} TND`}</strong><span>ventes des 7 derniers jours</span></div>
         <TrendingUp size={18} aria-hidden="true" />
       </div>
-      <div className="sales-bars" role="img" aria-label="Sales over the last seven days">
+      <div className="sales-bars" role="img" aria-label="Ventes des sept derniers jours">
         {points.map((point) => (
           <div className="sales-bar-column" key={point.key} title={`${point.label}: ${point.amount.toFixed(3)} TND`}>
             <div className="sales-bar-track"><span className="sales-bar" style={{ height: `${Math.max((point.amount / maxValue) * 100, point.amount ? 8 : 2)}%` }} /></div>
@@ -38,7 +38,7 @@ function SalesBars({ points, loading }) {
           </div>
         ))}
       </div>
-      <div className="sales-chart-foot">Each bar shows completed ticket earnings for that day.</div>
+      <div className="sales-chart-foot">Chaque barre indique le montant des tickets terminés ce jour-là.</div>
     </div>
   );
 }
@@ -48,9 +48,9 @@ function ReadinessChart({ totals, data }) {
   const tillCoverage = data.tills.length ? Math.round((totals.openTills / data.tills.length) * 100) : 0;
   const alertClearance = data.alerts.length ? Math.round((data.alerts.filter((alert) => alert.acknowledged).length / data.alerts.length) * 100) : 100;
   const rows = [
-    { label: "Catalog priced", value: productCoverage, detail: `${totals.priceCount} of ${totals.productCount} products` },
-    { label: "Tills active", value: tillCoverage, detail: `${totals.openTills} of ${data.tills.length} tills open` },
-    { label: "Alerts cleared", value: alertClearance, detail: `${data.alerts.filter((alert) => alert.acknowledged).length} of ${data.alerts.length} alerts acknowledged` },
+    { label: "Catalogue tarifé", value: productCoverage, detail: `${totals.priceCount} sur ${totals.productCount} produits` },
+    { label: "Caisses actives", value: tillCoverage, detail: `${totals.openTills} sur ${data.tills.length} caisses ouvertes` },
+    { label: "Alertes traitées", value: alertClearance, detail: `${data.alerts.filter((alert) => alert.acknowledged).length} sur ${data.alerts.length} alertes reconnues` },
   ];
 
   return (
@@ -101,10 +101,10 @@ export default function DashboardModule() {
 
       const failed = [productsResult, pricesResult, alertsResult, tillsResult, transactionsResult].filter((result) => result.status === "rejected");
       if (failed.length > 0 && products.length === 0 && prices.length === 0 && alerts.length === 0 && tills.length === 0 && transactions.length === 0) {
-        setError("Some services are unreachable right now.");
+        setError("Certains services sont actuellement injoignables.");
       }
     } catch {
-      setError("Could not load the store dashboard.");
+      setError("Impossible de charger le tableau de bord du magasin.");
     } finally {
       setLoading(false);
     }
@@ -142,7 +142,7 @@ export default function DashboardModule() {
       date.setDate(now.getDate() - (6 - index));
       return {
         key: localDayKey(date),
-        label: date.toLocaleDateString([], { weekday: "short" }),
+        label: date.toLocaleDateString("fr-FR", { weekday: "short" }),
         amount: 0,
       };
     });
@@ -168,8 +168,8 @@ export default function DashboardModule() {
         .map((alert) => ({
           id: `alert-${alert.id}`,
           type: "alert",
-          label: `${productName(data.products, alert.productId)} is below reorder point`,
-          detail: `Stock ${alert.currentStock ?? 0} / reorder ${alert.reorderPoint ?? 0}`,
+          label: `${productName(data.products, alert.productId)} est sous le seuil de réapprovisionnement`,
+          detail: `Stock ${alert.currentStock ?? 0} / seuil ${alert.reorderPoint ?? 0}`,
           when: alert.createdAt || alert.raisedAt,
           tone: "warn",
         })),
@@ -181,8 +181,8 @@ export default function DashboardModule() {
         .map((tx) => ({
           id: `txn-${tx.id}`,
           type: "transaction",
-          label: tx.status === "COMPLETED" ? "Sale completed" : `Transaction ${tx.status?.toLowerCase() || "updated"}`,
-          detail: tx.total ? `${tx.total} TND` : "No total recorded",
+          label: tx.status === "COMPLETED" ? "Vente terminée" : `Transaction ${tx.status?.toLowerCase() || "mise à jour"}`,
+          detail: tx.total ? `${tx.total} TND` : "Aucun total enregistré",
           when: tx.completedAt || tx.startedAt,
           tone: tx.status === "COMPLETED" ? "ok" : "muted",
         })),
@@ -194,29 +194,29 @@ export default function DashboardModule() {
   }, [data]);
 
   const statCards = [
-    { label: "Products", value: totals.productCount, detail: `${totals.priceCount} with a selling price`, icon: Boxes, tone: "green" },
+    { label: "Produits", value: totals.productCount, detail: `${totals.priceCount} avec un prix de vente`, icon: Boxes, tone: "green" },
     {
-      label: "Total earnings",
+      label: "Chiffre d’affaires total",
       value: `${totals.ticketEarnings.toFixed(3)} TND`,
-      detail: `${totals.completedSales} completed tickets`,
+      detail: `${totals.completedSales} tickets terminés`,
       icon: CircleDollarSign,
       tone: "green",
     },
-    { label: "Open tills", value: totals.openTills, detail: totals.openTills ? "cash drawers live" : "no active session", icon: ShoppingCart, tone: "amber" },
-    { label: "Open alerts", value: totals.openAlerts, detail: totals.openAlerts ? "needs attention" : "all clear", icon: AlertTriangle, tone: "red" },
+    { label: "Caisses ouvertes", value: totals.openTills, detail: totals.openTills ? "tiroirs-caisses actifs" : "aucune session active", icon: ShoppingCart, tone: "amber" },
+    { label: "Alertes ouvertes", value: totals.openAlerts, detail: totals.openAlerts ? "nécessite une attention" : "aucune alerte", icon: AlertTriangle, tone: "red" },
   ];
 
   return (
     <div>
       <div className="dashboard-heading">
         <div>
-          <div className="dashboard-kicker">Operations overview</div>
-          <h1 className="page-title">Today at the store</h1>
-          <p className="page-sub">A clear view of the floor, the tills, and anything that needs a hand.</p>
+          <div className="dashboard-kicker">Vue d’ensemble des opérations</div>
+          <h1 className="page-title">Aujourd’hui au magasin</h1>
+          <p className="page-sub">Une vue claire de la surface de vente, des caisses et des points nécessitant votre attention.</p>
         </div>
         <button className="btn" onClick={loadDashboard} disabled={loading}>
           <RefreshCw size={14} className={loading ? "spin" : ""} />
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? "Actualisation…" : "Actualiser"}
         </button>
       </div>
 
@@ -225,37 +225,37 @@ export default function DashboardModule() {
       {totals.openAlerts > 0 && (
         <div className="dashboard-alert-strip" role="status">
           <span className="dashboard-alert-icon"><AlertTriangle size={17} /></span>
-          <div><strong>{totals.openAlerts} {totals.openAlerts === 1 ? "item needs" : "items need"} attention</strong><span>Review low-stock alerts before the next delivery run.</span></div>
-          <Link to="/procurement" className="dashboard-alert-link">Review alerts <ArrowRight size={14} /></Link>
+          <div><strong>{totals.openAlerts} {totals.openAlerts === 1 ? "article nécessite" : "articles nécessitent"} une attention</strong><span>Consultez les alertes de stock faible avant la prochaine livraison.</span></div>
+          <Link to="/procurement" className="dashboard-alert-link">Consulter les alertes <ArrowRight size={14} /></Link>
         </div>
       )}
 
-      <div className="dashboard-actions" aria-label="Quick actions">
+      <div className="dashboard-actions" aria-label="Actions rapides">
         {hasAnyRole(["ADMIN", "MANAGER", "CASHIER"]) && (
           <Link className="dashboard-action" to="/pos">
             <ShoppingCart size={16} />
-            <span><strong>Start a sale</strong><small>Open the checkout</small></span>
+            <span><strong>Démarrer une vente</strong><small>Ouvrir la caisse</small></span>
             <ArrowRight size={15} />
           </Link>
         )}
         {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
           <Link className="dashboard-action" to="/inventory">
             <PackagePlus size={16} />
-            <span><strong>Receive stock</strong><small>Add products or lots</small></span>
+            <span><strong>Réceptionner du stock</strong><small>Ajouter des produits ou des lots</small></span>
             <ArrowRight size={15} />
           </Link>
         )}
         {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
           <Link className="dashboard-action" to="/procurement">
             <Truck size={16} />
-            <span><strong>Review supply</strong><small>Orders and alerts</small></span>
+            <span><strong>Suivre l’approvisionnement</strong><small>Commandes et alertes</small></span>
             <ArrowRight size={15} />
           </Link>
         )}
         {hasAnyRole(["ADMIN", "MANAGER", "INVENTORY_MANAGER"]) && (
           <Link className="dashboard-action" to="/pricing">
             <Tag size={16} />
-            <span><strong>Update pricing</strong><small>Prices and promotions</small></span>
+            <span><strong>Modifier les prix</strong><small>Prix et promotions</small></span>
             <ArrowRight size={15} />
           </Link>
         )}
@@ -277,35 +277,35 @@ export default function DashboardModule() {
       </div>
 
       <div className="dashboard-grid two-up dashboard-analytics-grid">
-        <Panel title="Sales rhythm" icon={<TrendingUp size={16} />} className="dashboard-panel dashboard-chart-panel">
+        <Panel title="Rythme des ventes" icon={<TrendingUp size={16} />} className="dashboard-panel dashboard-chart-panel">
           <SalesBars points={salesTrend} loading={loading} />
         </Panel>
-        <Panel title="Store readiness" icon={<Activity size={16} />} className="dashboard-panel dashboard-chart-panel">
+        <Panel title="Préparation du magasin" icon={<Activity size={16} />} className="dashboard-panel dashboard-chart-panel">
           <ReadinessChart totals={totals} data={data} />
         </Panel>
       </div>
 
       <div className="dashboard-grid two-up">
-        <Panel title="Store pulse" icon={<Activity size={16} />} className="dashboard-panel">
+        <Panel title="Activité du magasin" icon={<Activity size={16} />} className="dashboard-panel">
           <div className="pulse-stack">
             <div className="pulse-row">
-              <span>Completed sales</span>
+              <span>Ventes terminées</span>
               <strong>{totals.completedSales}</strong>
             </div>
             <div className="pulse-row">
-              <span>Total ticket earnings</span>
+              <span>Chiffre d’affaires des tickets</span>
               <strong>{totals.ticketEarnings.toFixed(3)} TND</strong>
             </div>
             <div className="pulse-row">
-              <span>Procurement follow-up</span>
-              <strong>{totals.openAlerts === 0 ? "Healthy" : `${totals.openAlerts} waiting`}</strong>
+              <span>Suivi des approvisionnements</span>
+              <strong>{totals.openAlerts === 0 ? "Satisfaisant" : `${totals.openAlerts} en attente`}</strong>
             </div>
           </div>
         </Panel>
 
-        <Panel title="Recent activity" icon={<LayoutGrid size={16} />} className="dashboard-panel">
+        <Panel title="Activité récente" icon={<LayoutGrid size={16} />} className="dashboard-panel">
           {recentActivity.length === 0 ? (
-            <Empty>No live activity yet. Start by adding stock or opening a till.</Empty>
+            <Empty>Aucune activité pour le moment. Commencez par ajouter du stock ou ouvrir une caisse.</Empty>
           ) : (
             <div className="activity-list">
               {recentActivity.map((item) => (

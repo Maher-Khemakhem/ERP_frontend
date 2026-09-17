@@ -41,7 +41,7 @@ export default function PhoneScannerPage() {
       setBarcode("");
       if (navigator.vibrate) navigator.vibrate(80);
     } catch (err) {
-      setMessage({ ok: false, text: err.message || "Could not send this barcode." });
+      setMessage({ ok: false, text: err.message || "Impossible d’envoyer ce code-barres." });
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -82,7 +82,7 @@ export default function PhoneScannerPage() {
       ]);
       const startCamera = async () => {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("This browser does not support camera access.");
+          throw new Error("Ce navigateur ne prend pas en charge l’accès à la caméra.");
         }
 
         stream = await navigator.mediaDevices.getUserMedia({
@@ -158,7 +158,7 @@ export default function PhoneScannerPage() {
       startCamera().catch((err) => {
         if (!cancelled) {
           setCameraState("error");
-          setMessage({ ok: false, text: err.message || "Camera permission was denied." });
+          setMessage({ ok: false, text: err.message || "L’autorisation d’utiliser la caméra a été refusée." });
         }
       });
     }, 0);
@@ -190,12 +190,12 @@ export default function PhoneScannerPage() {
   return (
     <main className="phone-scanner-page">
       <section className="phone-scanner-card">
-        <div className="phone-scanner-brand"><Smartphone size={18} /> Counter · Phone scanner</div>
-        <h1>Scan an item</h1>
-        <p className="phone-scanner-help">Point your camera at a product barcode. Each successful scan is sent to the open ticket on the PC.</p>
+        <div className="phone-scanner-brand"><Smartphone size={18} /> Counter · Scanner mobile</div>
+        <h1>Scanner un article</h1>
+        <p className="phone-scanner-help">Pointez votre caméra vers le code-barres d’un produit. Chaque scan réussi est envoyé au ticket ouvert sur l’ordinateur.</p>
 
         {!sessionId || !token ? (
-          <Message ok={false} text="This scanner link is incomplete. Generate a new pairing link on the PC." />
+            <Message ok={false} text="Ce lien de scanner est incomplet. Générez un nouveau lien d’association sur l’ordinateur." />
         ) : (
           <>
             <div className={`camera-frame ${cameraState}`}>
@@ -203,28 +203,28 @@ export default function PhoneScannerPage() {
               {cameraState === "ready" && <div className="scan-target" aria-hidden="true" />}
               {cameraState === "idle" && (
                 <button type="button" className="camera-action" onClick={handleStartCamera}>
-                  Start camera
+                  Démarrer la caméra
                 </button>
               )}
-              {cameraState === "starting" && <span>Starting camera…</span>}
-              {cameraState === "invalid" && <span>Invalid pairing</span>}
+              {cameraState === "starting" && <span>Démarrage de la caméra…</span>}
+              {cameraState === "invalid" && <span>Association invalide</span>}
               {cameraState === "error" && (
                 <button type="button" className="camera-action" onClick={handleStartCamera}>
-                  Try camera again
+                  Réessayer la caméra
                 </button>
               )}
             </div>
-            {lastReadBarcode && <div className="phone-read-code">Detected: <code>{lastReadBarcode}</code></div>}
+            {lastReadBarcode && <div className="phone-read-code">Détecté : <code>{lastReadBarcode}</code></div>}
             <Message ok={message?.ok} text={message?.text} />
             {lastScan && (
               <div className="phone-scan-success">
                 <CheckCircle2 size={17} />
-                <span><strong>{lastScan.productName}</strong><small>{lastScan.barcode} · Added to PC ticket</small></span>
+                <span><strong>{lastScan.productName}</strong><small>{lastScan.barcode} · Ajouté au ticket de l’ordinateur</small></span>
               </div>
             )}
             <form className="phone-manual-form" onSubmit={handleManualSubmit}>
-              <input value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="Or type barcode" inputMode="numeric" aria-label="Barcode" />
-              <button className="phone-scan-button" type="submit" disabled={sending || !barcode.trim()}><Barcode size={17} /> Send</button>
+              <input value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="Ou saisir un code-barres" inputMode="numeric" aria-label="Code-barres" />
+              <button className="phone-scan-button" type="submit" disabled={sending || !barcode.trim()}><Barcode size={17} /> Envoyer</button>
             </form>
           </>
         )}

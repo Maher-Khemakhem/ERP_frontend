@@ -43,7 +43,7 @@ function ProductThumb({ src, alt = "", size = 44, className = "" }) {
   return (
     <img
       src={src}
-      alt={alt || "Product image"}
+      alt={alt || "Image du produit"}
       className={`product-thumb-img ${className}`.trim()}
       style={{ width: size, height: size, minWidth: size }}
       onError={() => setError(true)}
@@ -96,7 +96,7 @@ export default function InventoryModule() {
       const data = await request("/api/inventory/products");
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
-      setProductsError(err.message || "Could not reach the inventory service.");
+      setProductsError(err.message || "Impossible de joindre le service de stock.");
     } finally {
       setProductsLoading(false);
     }
@@ -172,8 +172,8 @@ export default function InventoryModule() {
       <style>{moduleStyles}</style>
       <div className="inventory-header-row">
         <div>
-          <h1 className="page-title">Inventory</h1>
-          <p className="page-sub">Products, lots and real-time stock levels — managed with precision.</p>
+          <h1 className="page-title">Stock</h1>
+          <p className="page-sub">Produits, lots et niveaux de stock en temps réel — gérés avec précision.</p>
         </div>
         <div className="inventory-top-actions">
           {recentReceipts.length > 0 && (
@@ -181,10 +181,10 @@ export default function InventoryModule() {
               type="button"
               className="btn btn-secondary"
               onClick={() => setRecentDeliveriesOpen(true)}
-              title="View receipts from this session"
+              title="Voir les réceptions de cette session"
             >
               <History size={15} />
-              <span>Recent Deliveries ({recentReceipts.length})</span>
+              <span>Réceptions récentes ({recentReceipts.length})</span>
             </button>
           )}
           <button
@@ -193,38 +193,38 @@ export default function InventoryModule() {
             onClick={() => handleOpenReceive(null)}
           >
             <Truck size={15} />
-            <span>Receive Stock</span>
+            <span>Réceptionner du stock</span>
           </button>
         </div>
       </div>
 
-      <div className="inventory-summary" aria-label="Inventory summary">
+      <div className="inventory-summary" aria-label="Résumé du stock">
         <div className="summary-stat-card">
-          <span>Products</span>
+          <span>Produits</span>
           <strong>{stats.total}</strong>
         </div>
         <div className={`summary-stat-card ${stats.outOfStockCount > 0 ? "highlight-danger" : ""}`}>
-          <span>Out of stock</span>
+          <span>Rupture de stock</span>
           <strong className={stats.outOfStockCount > 0 ? "text-danger" : ""}>{stats.outOfStockCount}</strong>
         </div>
         <div className={`summary-stat-card ${stats.lowStockCount > 0 ? "highlight-warn" : ""}`}>
-          <span>Low stock</span>
+          <span>Stock faible</span>
           <strong className={stats.lowStockCount > 0 ? "text-warn" : ""}>{stats.lowStockCount}</strong>
         </div>
         <div className="summary-stat-card">
-          <span>Perishable items</span>
+          <span>Produits périssables</span>
           <strong>{stats.perishableCount}</strong>
         </div>
       </div>
 
-      <div className="inventory-actions" role="toolbar" aria-label="Inventory views">
+      <div className="inventory-actions" role="toolbar" aria-label="Vues du stock">
         <button
           type="button"
           className={`inventory-action ${tab === "products" ? "active" : ""}`}
           onClick={() => setTab("products")}
         >
           <Boxes size={16} />
-          <span><strong>Products catalogue</strong><small>Variants, families & pricing units</small></span>
+            <span><strong>Catalogue produits</strong><small>Variantes, familles et unités de prix</small></span>
         </button>
 
         <button
@@ -234,9 +234,9 @@ export default function InventoryModule() {
         >
           <Search size={16} />
           <span>
-            <strong>Stock levels</strong>
+            <strong>Niveaux de stock</strong>
             <small>
-              {stats.lowStockCount > 0 ? `${stats.lowStockCount} items need reorder` : "Check quantities & FEFO expiry"}
+              {stats.lowStockCount > 0 ? `${stats.lowStockCount} articles à réapprovisionner` : "Vérifier les quantités et les dates FEFO"}
             </small>
           </span>
         </button>
@@ -284,13 +284,13 @@ export default function InventoryModule() {
       {/* RECENT DELIVERIES DRAWER / MODAL */}
       {recentDeliveriesOpen && (
         <Modal
-          title="Recent Deliveries (This Session)"
+          title="Réceptions récentes (cette session)"
           icon={<History size={16} />}
           onClose={() => setRecentDeliveriesOpen(false)}
         >
           <div className="recent-deliveries-modal-content">
             <p className="sidebar-description">
-              Deliveries registered in this browser session. Oldest-expiry lots are deducted first during checkout.
+              Réceptions enregistrées dans cette session du navigateur. Les lots dont la date d’expiration est la plus proche sont déduits en premier à la caisse.
             </p>
             <div className="recent-list">
               {recentReceipts.map((r) => (
@@ -301,13 +301,13 @@ export default function InventoryModule() {
                   </div>
                   <div className="recent-item-details">
                     <span className="recent-qty">
-                      +{r.quantity} {r.unitType === "WEIGHT" ? "kg" : "units"}
+                      +{r.quantity} {r.unitType === "WEIGHT" ? "kg" : "unités"}
                     </span>
                     <span className="recent-lot">{r.lotNumber}</span>
                   </div>
                   <div className="recent-item-meta">
-                    {r.expiryDate ? <span>Exp: {r.expiryDate}</span> : <span>No expiry</span>}
-                    {r.supplierReference && <span>Ref: {r.supplierReference}</span>}
+                    {r.expiryDate ? <span>Exp. : {r.expiryDate}</span> : <span>Sans expiration</span>}
+                    {r.supplierReference && <span>Réf. : {r.supplierReference}</span>}
                   </div>
                 </div>
               ))}
@@ -318,7 +318,7 @@ export default function InventoryModule() {
                 className="btn btn-primary"
                 onClick={() => setRecentDeliveriesOpen(false)}
               >
-                Close
+                Fermer
               </button>
             </div>
           </div>
@@ -405,19 +405,19 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
   async function handleSubmit(e) {
     e.preventDefault();
     if (!selectedProductId) {
-      setErrorMsg("Please choose a product to receive.");
+      setErrorMsg("Veuillez choisir un produit à réceptionner.");
       return;
     }
     if (!form.quantityValue || Number(form.quantityValue) <= 0) {
-      setErrorMsg("Quantity must be greater than zero.");
+      setErrorMsg("La quantité doit être supérieure à zéro.");
       return;
     }
     if (unitType === "EACH" && !Number.isInteger(Number(form.quantityValue))) {
-      setErrorMsg("This product is sold per unit (EACH) — quantity must be a whole number.");
+      setErrorMsg("Ce produit est vendu à l’unité (EACH) : la quantité doit être un nombre entier.");
       return;
     }
     if (isPerishable && !form.expiryDate) {
-      setErrorMsg("Expiry date is required for perishable products to enforce FEFO stock rotation.");
+      setErrorMsg("La date d’expiration est obligatoire pour les produits périssables afin d’appliquer la rotation FEFO.");
       return;
     }
 
@@ -441,11 +441,11 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
         },
       });
 
-      const qtyDisplay = `${form.quantityValue} ${unitType === "WEIGHT" ? "kg" : "units"}`;
+      const qtyDisplay = `${form.quantityValue} ${unitType === "WEIGHT" ? "kg" : "unités"}`;
       const receipt = {
         id: Math.random().toString(),
         productId: selectedProductId,
-        productName: selectedProduct?.name || "Product",
+        productName: selectedProduct?.name || "Produit",
         sku: selectedProduct?.sku || "",
         quantity: form.quantityValue,
         unitType,
@@ -453,18 +453,18 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
         expiryDate: form.expiryDate || null,
         unitCost: form.unitCost || null,
         supplierReference: form.supplierReference || null,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
       };
 
       onSuccess(receipt);
-      setSuccessMsg(`Received ${qtyDisplay} for "${selectedProduct?.name}". Lot ${generatedLot} created.`);
+      setSuccessMsg(`${qtyDisplay} réceptionnés pour « ${selectedProduct?.name} ». Lot ${generatedLot} créé.`);
 
       // Reset form after short delay or keep open for another receipt
       setTimeout(() => {
         onClose();
       }, 1200);
     } catch (err) {
-      setErrorMsg(err.message || "Could not receive stock.");
+      setErrorMsg(err.message || "Impossible de réceptionner le stock.");
     } finally {
       setSubmitting(false);
     }
@@ -472,7 +472,7 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
 
   return (
     <Modal
-      title="Receive Stock"
+      title="Réceptionner du stock"
       icon={<Truck size={16} />}
       onClose={onClose}
     >
@@ -483,14 +483,14 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
         {/* 1. PRODUCT SELECTION */}
         {!selectedProduct || isChangingProduct ? (
           <div className="modal-product-picker">
-            <label className="field-label">Search and Select Product</label>
+            <label className="field-label">Rechercher et sélectionner un produit</label>
             <div className="modal-search-box">
               <Search size={14} className="picker-search-icon" />
               <input
                 type="search"
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search name or SKU/barcode…"
+                placeholder="Rechercher un nom ou un SKU/code-barres…"
                 autoFocus
               />
               {selectedProduct && (
@@ -499,14 +499,14 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                   className="btn btn-small"
                   onClick={() => setIsChangingProduct(false)}
                 >
-                  Keep {selectedProduct.name}
+                  Conserver {selectedProduct.name}
                 </button>
               )}
             </div>
 
             <div className="modal-picker-list">
               {filteredProducts.length === 0 ? (
-                <div className="picker-empty">No matching products found.</div>
+                <div className="picker-empty">Aucun produit correspondant trouvé.</div>
               ) : (
                 filteredProducts.map((p) => (
                   <button
@@ -519,13 +519,13 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                       <ProductThumb src={p.imageUrl || p.familyImageUrl} alt={p.name} size={36} />
                       <div className="picker-item-main">
                         <span className="picker-item-name">{p.name}</span>
-                        <span className="picker-item-sku">SKU: {p.sku}</span>
+                      <span className="picker-item-sku">SKU : {p.sku}</span>
                       </div>
                     </div>
                     <div className="picker-item-badges">
                       {p.familyName && <span className="mini-chip">{p.familyName}</span>}
-                      <span className="mini-chip">{p.unitType === "WEIGHT" ? "kg" : "units"}</span>
-                      {p.perishable && <span className="mini-chip warn">Perishable</span>}
+                      <span className="mini-chip">{p.unitType === "WEIGHT" ? "kg" : "unités"}</span>
+                      {p.perishable && <span className="mini-chip warn">Périssable</span>}
                     </div>
                   </button>
                 ))
@@ -544,8 +544,8 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                 <div>
                   <div className="selected-product-name">{selectedProduct.name}</div>
                   <div className="selected-product-sub">
-                    SKU: <strong>{selectedProduct.sku}</strong>
-                    {selectedProduct.familyName && ` · Category: ${selectedProduct.familyName}`}
+                    SKU : <strong>{selectedProduct.sku}</strong>
+                    {selectedProduct.familyName && ` · Catégorie : ${selectedProduct.familyName}`}
                   </div>
                 </div>
               </div>
@@ -554,27 +554,27 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                 className="btn btn-small btn-secondary"
                 onClick={() => setIsChangingProduct(true)}
               >
-                Change
+                Modifier
               </button>
             </div>
 
             <div className="modal-metric-chips">
               <div className="metric-chip">
-                <span className="metric-lbl">Unit</span>
-                <strong>{unitType === "WEIGHT" ? "Weight (kg)" : "Each (unit)"}</strong>
+                <span className="metric-lbl">Unité</span>
+                <strong>{unitType === "WEIGHT" ? "Poids (kg)" : "Unité (pièce)"}</strong>
               </div>
               <div className="metric-chip">
-                <span className="metric-lbl">On hand now</span>
-                <strong>{currentStock} {unitType === "WEIGHT" ? "kg" : "units"}</strong>
+                <span className="metric-lbl">En stock</span>
+                <strong>{currentStock} {unitType === "WEIGHT" ? "kg" : "unités"}</strong>
               </div>
               <div className="metric-chip">
-                <span className="metric-lbl">Reorder threshold</span>
+                <span className="metric-lbl">Seuil de réapprovisionnement</span>
                 <strong>{selectedProduct.reorderPoint}</strong>
               </div>
               <div className="metric-chip">
-                <span className="metric-lbl">Perishable</span>
+                <span className="metric-lbl">Périssable</span>
                 <strong className={isPerishable ? "text-warn" : ""}>
-                  {isPerishable ? "Yes (Expiry Required)" : "No"}
+                  {isPerishable ? "Oui (expiration obligatoire)" : "Non"}
                 </strong>
               </div>
             </div>
@@ -582,7 +582,7 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
             {isPerishable && (
               <div className="perishable-alert-banner">
                 <AlertTriangle size={14} />
-                <span>Perishable product: Expiry date is strictly required for FEFO stock deduction.</span>
+                <span>Produit périssable : la date d’expiration est obligatoire pour la déduction FEFO du stock.</span>
               </div>
             )}
           </div>
@@ -594,9 +594,9 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
             {/* Quantity */}
             <div className="form-group-card">
               <div className="group-title">
-                <span>Quantity to receive</span>
+                <span>Quantité à réceptionner</span>
                 <span className="group-hint">
-                  {unitType === "WEIGHT" ? "Kilograms (3 decimals allowed)" : "Whole units only"}
+                  {unitType === "WEIGHT" ? "Kilogrammes (3 décimales autorisées)" : "Unités entières uniquement"}
                 </span>
               </div>
               <div className="quantity-input-row">
@@ -606,16 +606,16 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                   step={unitType === "WEIGHT" ? "0.001" : "1"}
                   value={form.quantityValue}
                   onChange={(e) => setForm({ ...form, quantityValue: e.target.value })}
-                  placeholder={unitType === "WEIGHT" ? "e.g. 15.500" : "e.g. 4"}
+                  placeholder={unitType === "WEIGHT" ? "ex. 15,500" : "ex. 4"}
                   className="large-number-input"
                   required
                   autoFocus
                 />
-                <span className="quantity-unit-label">{unitType === "WEIGHT" ? "kg" : "units"}</span>
+                <span className="quantity-unit-label">{unitType === "WEIGHT" ? "kg" : "unités"}</span>
               </div>
 
               <div className="preset-buttons-row">
-                <span className="preset-label">Quick add:</span>
+                <span className="preset-label">Ajout rapide :</span>
                 {unitType === "WEIGHT" ? (
                   <>
                     <button type="button" className="preset-btn" onClick={() => addQuantity(1)}>+1 kg</button>
@@ -638,7 +638,7 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                     className="preset-btn clear"
                     onClick={() => setForm({ ...form, quantityValue: "" })}
                   >
-                    Clear
+                    Effacer
                   </button>
                 )}
               </div>
@@ -649,14 +649,14 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
               <div className="group-title">
                 <span className="flex-center-gap">
                   <Calendar size={13} />
-                  Expiry date
+                  Date d’expiration
                   {isPerishable ? (
-                    <span className="badge-required">Required</span>
+                    <span className="badge-required">Obligatoire</span>
                   ) : (
-                    <span className="badge-optional">Optional</span>
+                    <span className="badge-optional">Facultatif</span>
                   )}
                 </span>
-                <span className="group-hint">FEFO priority queue</span>
+                <span className="group-hint">Priorité FEFO</span>
               </div>
               <input
                 type="date"
@@ -666,43 +666,43 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
                 required={isPerishable}
               />
               <div className="preset-buttons-row">
-                <span className="preset-label">Shortcuts:</span>
-                <button type="button" className="preset-btn" onClick={() => setDateOffset(7, 0)}>+7 Days</button>
-                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 1)}>+1 Month</button>
-                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 3)}>+3 Months</button>
-                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 6)}>+6 Months</button>
-                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 12)}>+1 Year</button>
+                <span className="preset-label">Raccourcis :</span>
+                <button type="button" className="preset-btn" onClick={() => setDateOffset(7, 0)}>+7 jours</button>
+                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 1)}>+1 mois</button>
+                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 3)}>+3 mois</button>
+                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 6)}>+6 mois</button>
+                <button type="button" className="preset-btn" onClick={() => setDateOffset(0, 12)}>+1 an</button>
               </div>
             </div>
 
             {/* Traceability */}
             <div className="form-two-cols">
-              <Field label="Lot number">
+              <Field label="Numéro de lot">
                 <div className="input-with-action">
                   <input
                     type="text"
                     value={form.lotNumber}
                     onChange={(e) => setForm({ ...form, lotNumber: e.target.value })}
-                    placeholder="Auto if blank"
+                    placeholder="Automatique si vide"
                   />
-                  <button type="button" className="btn btn-small" onClick={generateAutoLot} title="Auto-generate code">
+                  <button type="button" className="btn btn-small" onClick={generateAutoLot} title="Générer automatiquement le code">
                     <Sparkles size={12} /> Auto
                   </button>
                 </div>
               </Field>
 
-              <Field label="Supplier reference">
+              <Field label="Référence fournisseur">
                 <input
                   type="text"
                   value={form.supplierReference}
                   onChange={(e) => setForm({ ...form, supplierReference: e.target.value })}
-                  placeholder="PO # or Invoice #"
+                  placeholder="N° commande ou facture"
                 />
               </Field>
             </div>
 
             {/* Cost */}
-            <Field label="Unit purchase cost (TND, optional)">
+            <Field label="Coût d’achat unitaire (TND, facultatif)">
               <input
                 type="number"
                 min="0"
@@ -715,10 +715,10 @@ function ReceiveStockModal({ products, families, stockSummaries, initialProduct,
 
             <div className="modal-actions">
               <button type="button" className="btn" onClick={onClose} disabled={submitting}>
-                Cancel
+                Annuler
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? "Receiving…" : "Confirm & Receive Stock"}
+                {submitting ? "Réception…" : "Confirmer et réceptionner"}
               </button>
             </div>
           </form>
@@ -758,7 +758,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
         if (isMounted) setInspectStock(data);
       })
       .catch((err) => {
-        if (isMounted) setInspectError(err.message || "Could not fetch stock details.");
+        if (isMounted) setInspectError(err.message || "Impossible de récupérer les détails du stock.");
       })
       .finally(() => {
         if (isMounted) setInspectLoading(false);
@@ -856,18 +856,18 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
   return (
     <div>
       <Panel
-        title="Stock Levels & Expiry Tracker"
+        title="Niveaux de stock et suivi des expirations"
         icon={<Search size={16} />}
         right={
           <div className="inventory-panel-actions">
             <button className="btn btn-small" onClick={onRefresh} disabled={loading}>
-              <RefreshCw size={13} /> Refresh
+              <RefreshCw size={13} /> Actualiser
             </button>
             <button
               className="btn btn-primary btn-small"
               onClick={() => onOpenReceive(null)}
             >
-              <Truck size={13} /> Receive Stock
+              <Truck size={13} /> Réceptionner du stock
             </button>
           </div>
         }
@@ -880,8 +880,8 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter by product name, SKU or category…"
-              aria-label="Filter stock items"
+              placeholder="Filtrer par nom, SKU ou catégorie…"
+              aria-label="Filtrer les articles en stock"
             />
             {query && (
               <button type="button" className="btn-icon" onClick={() => setQuery("")}>
@@ -896,7 +896,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               className={`status-pill ${statusFilter === "ALL" ? "active" : ""}`}
               onClick={() => setStatusFilter("ALL")}
             >
-              All Items ({counts.all})
+              Tous les articles ({counts.all})
             </button>
             <button
               type="button"
@@ -904,7 +904,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               onClick={() => setStatusFilter("LOW_STOCK")}
             >
               <AlertTriangle size={12} />
-              Low Stock ({counts.low})
+              Stock faible ({counts.low})
             </button>
             <button
               type="button"
@@ -912,7 +912,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               onClick={() => setStatusFilter("OUT_OF_STOCK")}
             >
               <AlertCircle size={12} />
-              Out of Stock ({counts.out})
+              Rupture de stock ({counts.out})
             </button>
             <button
               type="button"
@@ -920,14 +920,14 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
               onClick={() => setStatusFilter("EXPIRING_SOON")}
             >
               <Clock size={12} />
-              Expiring Soon ({counts.expiring})
+              Expiration prochaine ({counts.expiring})
             </button>
           </div>
         </div>
 
         {families.length > 0 && (
           <div className="stock-family-row">
-            <span className="family-label">Category:</span>
+            <span className="family-label">Catégorie :</span>
             <button
               type="button"
               className={`filter-pill ${familyFilter === "ALL" ? "active" : ""}`}
@@ -949,12 +949,12 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
         )}
 
         {filteredList.length === 0 ? (
-          <Empty>No items match the active filters.</Empty>
+          <Empty>Aucun article ne correspond aux filtres actifs.</Empty>
         ) : (
           <div className="stock-cards-grid">
             {filteredList.map((item) => {
               const { product, totalQuantity, lotCount, earliestExpiry, daysUntilEarliestExpiry, status } = item;
-              const unitLabel = product.unitType === "WEIGHT" ? "kg" : "units";
+              const unitLabel = product.unitType === "WEIGHT" ? "kg" : "unités";
               const reorderRatio = product.reorderPoint > 0
                 ? Math.min(100, Math.round((totalQuantity / product.reorderPoint) * 100))
                 : 100;
@@ -974,18 +974,18 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                       </div>
                     </div>
                     {status === "OUT_OF_STOCK" ? (
-                      <span className="stock-badge danger">Out of Stock</span>
+                      <span className="stock-badge danger">Rupture de stock</span>
                     ) : status === "LOW_STOCK" ? (
-                      <span className="stock-badge warn">Low Stock</span>
+                      <span className="stock-badge warn">Stock faible</span>
                     ) : (
-                      <span className="stock-badge ok">Healthy</span>
+                      <span className="stock-badge ok">Satisfaisant</span>
                     )}
                   </div>
 
                   <div className="stock-card-body">
                     <div className="stock-level-display">
                       <span className="stock-level-num">{totalQuantity}</span>
-                      <span className="stock-level-unit">{unitLabel} on hand</span>
+                      <span className="stock-level-unit">{unitLabel} en stock</span>
                     </div>
 
                     <div className="stock-progress-bar-wrap">
@@ -995,7 +995,7 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                       />
                     </div>
                     <div className="stock-reorder-legend">
-                      <span>Reorder threshold: {product.reorderPoint} {unitLabel}</span>
+                      <span>Seuil de réapprovisionnement : {product.reorderPoint} {unitLabel}</span>
                       <span>{lotCount} {lotCount === 1 ? "lot" : "lots"}</span>
                     </div>
 
@@ -1005,19 +1005,19 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                         {earliestExpiry ? (
                           daysUntilEarliestExpiry <= 0 ? (
                             <span className="expiry-pill expired">
-                              <AlertTriangle size={11} /> Expired ({earliestExpiry})
+                              <AlertTriangle size={11} /> Expiré ({earliestExpiry})
                             </span>
                           ) : daysUntilEarliestExpiry <= 7 ? (
                             <span className="expiry-pill urgent">
-                              <Clock size={11} /> Earliest exp: {earliestExpiry} ({daysUntilEarliestExpiry}d left)
+                              <Clock size={11} /> Expiration la plus proche : {earliestExpiry} ({daysUntilEarliestExpiry} j restants)
                             </span>
                           ) : (
                             <span className="expiry-pill normal">
-                              <Calendar size={11} /> Earliest exp: {earliestExpiry}
+                              <Calendar size={11} /> Expiration la plus proche : {earliestExpiry}
                             </span>
                           )
                         ) : (
-                          <span className="expiry-pill none">No active lots</span>
+                          <span className="expiry-pill none">Aucun lot actif</span>
                         )}
                       </div>
                     )}
@@ -1029,14 +1029,14 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                       className="btn btn-small"
                       onClick={() => setInspectProductId(product.id)}
                     >
-                      <Layers size={13} /> View Lots ({lotCount})
+                      <Layers size={13} /> Voir les lots ({lotCount})
                     </button>
                     <button
                       type="button"
                       className="btn btn-primary btn-small"
                       onClick={() => onOpenReceive(product)}
                     >
-                      <Truck size={13} /> Receive
+                      <Truck size={13} /> Réceptionner
                     </button>
                   </div>
                 </div>
@@ -1049,11 +1049,11 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
       {/* LOT DETAILS MODAL */}
       {inspectProductId && (
         <Modal
-          title={inspectedProduct ? `Lots: ${inspectedProduct.name}` : "Stock Details"}
+          title={inspectedProduct ? `Lots : ${inspectedProduct.name}` : "Détails du stock"}
           icon={<Layers size={16} />}
           onClose={() => setInspectProductId(null)}
         >
-          {inspectLoading && <div className="modal-loading">Loading lots details…</div>}
+          {inspectLoading && <div className="modal-loading">Chargement des détails des lots…</div>}
           <Message ok={false} text={inspectError} />
 
           {inspectStock && (
@@ -1067,10 +1067,10 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                   />
                   <div>
                     <div className="lot-product-name">{inspectedProduct?.name}</div>
-                    <div className="lot-product-sku">SKU: {inspectedProduct?.sku}</div>
+                  <div className="lot-product-sku">SKU : {inspectedProduct?.sku}</div>
                     <div className="lot-total-stat">
                       <strong>{inspectStock.totalQuantity}</strong>
-                      <span>{inspectedProduct?.unitType === "WEIGHT" ? "kg" : "units"} on hand</span>
+                      <span>{inspectedProduct?.unitType === "WEIGHT" ? "kg" : "unités"} en stock</span>
                     </div>
                   </div>
                 </div>
@@ -1083,20 +1083,20 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                     onOpenReceive(p);
                   }}
                 >
-                  <Truck size={13} /> Receive more stock
+                  <Truck size={13} /> Réceptionner davantage
                 </button>
               </div>
 
               <div className="fefo-banner">
                 <Sparkles size={14} className="fefo-banner-icon" />
                 <div>
-                  <strong>First-Expire-First-Out (FEFO) Enforced</strong>
-                  <p>Lots are sorted chronologically by expiration date. Point of sale checkout will deduct inventory from Lot #1 first.</p>
+                  <strong>Rotation premier expiré, premier sorti (FEFO) activée</strong>
+                  <p>Les lots sont triés chronologiquement par date d’expiration. La caisse déduira d’abord le stock du lot n°1.</p>
                 </div>
               </div>
 
               {sortedLots.length === 0 ? (
-                <Empty>No active stock lots found for this product. Receive a delivery to initialize stock.</Empty>
+                <Empty>Aucun lot de stock actif pour ce produit. Réceptionnez une livraison pour initialiser le stock.</Empty>
               ) : (
                 <div className="lots-list">
                   {sortedLots.map((lot, idx) => {
@@ -1111,40 +1111,40 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                           <div className="lot-identity">
                             <span className="lot-code">{lot.lotNumber || `LOT-${lot.id.slice(0, 8)}`}</span>
                             {isFirst && sortedLots.length > 1 && (
-                              <span className="fefo-first-badge">🎯 Sells Next (FEFO Priority)</span>
+                              <span className="fefo-first-badge">🎯 Vendu ensuite (priorité FEFO)</span>
                             )}
                           </div>
                           <div className="lot-quantity">
-                            {lot.quantity} {inspectedProduct?.unitType === "WEIGHT" ? "kg" : "units"}
+                            {lot.quantity} {inspectedProduct?.unitType === "WEIGHT" ? "kg" : "unités"}
                           </div>
                         </div>
 
                         <div className="lot-card-grid">
                           <div className="lot-meta-cell">
-                            <span className="meta-lbl">Expiry</span>
+                            <span className="meta-lbl">Expiration</span>
                             <span className="meta-val">
                               {lot.expiryDate ? (
                                 <span className={daysLeft <= 7 ? "text-danger" : ""}>
                                   {lot.expiryDate} {daysLeft !== null && `(${daysLeft}d left)`}
                                 </span>
                               ) : (
-                                "None (non-perishable)"
+                                "Aucune (non périssable)"
                               )}
                             </span>
                           </div>
 
                           <div className="lot-meta-cell">
-                            <span className="meta-lbl">Received date</span>
+                            <span className="meta-lbl">Date de réception</span>
                             <span className="meta-val">{lot.receivedAt ? lot.receivedAt.slice(0, 10) : "—"}</span>
                           </div>
 
                           <div className="lot-meta-cell">
-                            <span className="meta-lbl">Supplier ref</span>
+                            <span className="meta-lbl">Réf. fournisseur</span>
                             <span className="meta-val">{lot.supplierReference || "—"}</span>
                           </div>
 
                           <div className="lot-meta-cell">
-                            <span className="meta-lbl">Unit cost</span>
+                            <span className="meta-lbl">Coût unitaire</span>
                             <span className="meta-val">
                               {lot.unitCost && Number(lot.unitCost) > 0 ? `${Number(lot.unitCost).toFixed(3)} TND` : "—"}
                             </span>
@@ -1189,7 +1189,7 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.sku.trim() || !form.name.trim()) {
-      setMsg({ ok: false, text: "SKU and name are required." });
+      setMsg({ ok: false, text: "Le SKU et le nom sont obligatoires." });
       return;
     }
     setCreating(true);
@@ -1209,13 +1209,13 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
           vatRate: Number(form.vatRate),
         },
       });
-      setMsg({ ok: true, text: `Product "${form.name}" added.` });
+      setMsg({ ok: true, text: `Produit « ${form.name} » ajouté.` });
       setForm({ sku: "", name: "", familyId: "", unitType: "EACH", perishable: false, reorderPoint: "10", vatRate: "19" });
       setImageFile(null);
       setShowForm(false);
       onCreated();
     } catch (err) {
-      setMsg({ ok: false, text: err.message || "Could not add the product." });
+      setMsg({ ok: false, text: err.message || "Impossible d’ajouter le produit." });
     } finally {
       setCreating(false);
     }
@@ -1224,11 +1224,11 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
   async function handleCreateFamily(event) {
     event.preventDefault();
     if (!familyForm.name.trim()) {
-      setMsg({ ok: false, text: "A family name is required." });
+      setMsg({ ok: false, text: "Le nom de la famille est obligatoire." });
       return;
     }
     if (!familyImageFile) {
-      setMsg({ ok: false, text: "Choose an image from your PC before creating the family." });
+      setMsg({ ok: false, text: "Choisissez une image sur votre ordinateur avant de créer la famille." });
       return;
     }
     setCreatingFamily(true);
@@ -1243,9 +1243,9 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
       setFamilyImageFile(null);
       onCreated();
       setShowFamilyForm(false);
-      setMsg({ ok: true, text: "Product family created." });
+      setMsg({ ok: true, text: "Famille de produits créée." });
     } catch (err) {
-      setMsg({ ok: false, text: err.message || "Could not create the family." });
+      setMsg({ ok: false, text: err.message || "Impossible de créer la famille." });
     } finally {
       setCreatingFamily(false);
     }
@@ -1268,13 +1268,13 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
   return (
     <div>
       <Panel
-        title="Products"
+        title="Produits"
         icon={<Boxes size={16} />}
         right={
           <div className="inventory-panel-actions">
-            <button className="btn btn-small" onClick={() => { setMsg(null); setShowFamilyForm(true); }}><Plus size={13} /> Add family</button>
-            <button className="btn btn-primary btn-small" onClick={() => { setMsg(null); setShowForm(true); }}><Plus size={13} /> Add product</button>
-            <button className="btn btn-small" onClick={onRefresh} disabled={loading}><RefreshCw size={13} /> Refresh</button>
+            <button className="btn btn-small" onClick={() => { setMsg(null); setShowFamilyForm(true); }}><Plus size={13} /> Ajouter une famille</button>
+            <button className="btn btn-primary btn-small" onClick={() => { setMsg(null); setShowForm(true); }}><Plus size={13} /> Ajouter un produit</button>
+            <button className="btn btn-small" onClick={onRefresh} disabled={loading}><RefreshCw size={13} /> Actualiser</button>
           </div>
         }
       >
@@ -1282,12 +1282,12 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
         <div className="inventory-list-toolbar">
           <label className="inventory-search">
             <Search size={14} />
-            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, SKU or category" aria-label="Search products" />
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un nom, un SKU ou une catégorie" aria-label="Rechercher des produits" />
           </label>
-          <span className="inventory-result-count">{filteredProducts.length} of {products.length}</span>
+          <span className="inventory-result-count">{filteredProducts.length} sur {products.length}</span>
         </div>
-        {!error && products.length === 0 && !loading && <Empty>No products yet. Add one to get started.</Empty>}
-        {!error && products.length > 0 && filteredProducts.length === 0 && <Empty>No products match “{query}”.</Empty>}
+        {!error && products.length === 0 && !loading && <Empty>Aucun produit pour le moment. Ajoutez-en un pour commencer.</Empty>}
+        {!error && products.length > 0 && filteredProducts.length === 0 && <Empty>Aucun produit ne correspond à « {query} ».</Empty>}
         <div className="products-grid">
           {filteredProducts.map((p) => (
             <ShelfTag key={p.id}>
@@ -1304,15 +1304,15 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
                     type="button"
                     className="btn btn-small btn-ghost"
                     onClick={() => onOpenReceive(p)}
-                    title="Receive stock for this product"
+                    title="Réceptionner du stock pour ce produit"
                   >
-                    <Truck size={13} /> Receive
+                    <Truck size={13} /> Réceptionner
                   </button>
                   <button
                     type="button"
                     className="btn btn-small btn-ghost"
                     onClick={() => onViewStock(p.id)}
-                    title="View stock level and lots"
+                    title="Voir le niveau de stock et les lots"
                   >
                     <Search size={13} /> Stock
                   </button>
@@ -1320,22 +1320,22 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
                     type="button"
                     className="btn-icon danger"
                     onClick={async () => {
-                      if (!window.confirm(`Delete ${p.name}? This only works if it has not been used in stock, pricing, or sales.`)) return;
+                      if (!window.confirm(`Supprimer ${p.name} ? Cela fonctionne uniquement s’il n’a pas été utilisé dans le stock, la tarification ou les ventes.`)) return;
                       setDeletingId(p.id);
                       setMsg(null);
                       try {
                         await request(`/api/inventory/products/${p.id}`, { method: "DELETE" });
-                        setMsg({ ok: true, text: `Product "${p.name}" deleted.` });
+                        setMsg({ ok: true, text: `Produit « ${p.name} » supprimé.` });
                         onRefresh();
                       } catch (err) {
-                        setMsg({ ok: false, text: err.message || "Could not delete the product." });
+                        setMsg({ ok: false, text: err.message || "Impossible de supprimer le produit." });
                       } finally {
                         setDeletingId(null);
                       }
                     }}
                     disabled={deletingId === p.id}
-                    aria-label={`Delete ${p.name}`}
-                    title="Delete product"
+                    aria-label={`Supprimer ${p.name}`}
+                    title="Supprimer le produit"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -1343,12 +1343,12 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
               </div>
               <div className="tag-meta">
                 {p.familyName && <Chip>{p.familyName}</Chip>}
-                <Chip>{p.unitType === "WEIGHT" ? "Weight (kg)" : "Each (unit)"}</Chip>
-                <Chip>Reorder at {p.reorderPoint}</Chip>
+                <Chip>{p.unitType === "WEIGHT" ? "Poids (kg)" : "À l’unité"}</Chip>
+                <Chip>Réapprovisionnement à {p.reorderPoint}</Chip>
                 {p.perishable && (
                   <Chip warn>
                     <AlertTriangle size={10} style={{ verticalAlign: -1, marginRight: 3 }} />
-                    Perishable
+                    Périssable
                   </Chip>
                 )}
               </div>
@@ -1358,72 +1358,72 @@ function ProductsTab({ products, families, loading, error, onRefresh, onCreated,
       </Panel>
 
       {showForm && (
-        <Modal title="Add a product" icon={<Plus size={16} />} onClose={() => !creating && setShowForm(false)}>
+        <Modal title="Ajouter un produit" icon={<Plus size={16} />} onClose={() => !creating && setShowForm(false)}>
           <Message ok={msg?.ok} text={msg?.text} />
           <form className="product-form" onSubmit={handleSubmit}>
             <div className="product-basic-grid">
               <Field label="SKU"><input type="text" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="0001234567" autoFocus /></Field>
-              <Field label="Variant name"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Safia 1.5L" /></Field>
+              <Field label="Nom de la variante"><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Safia 1,5 L" /></Field>
             </div>
-            <Field label="Product family (optional)">
+            <Field label="Famille de produits (facultatif)">
               <select value={form.familyId} onChange={(e) => setForm({ ...form, familyId: e.target.value })}>
-                <option value="">No family</option>
+                <option value="">Aucune famille</option>
                 {families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
               </select>
             </Field>
             <div className="product-image-source">
               <div className="family-upload-field product-image-upload-field">
-                <span className="field-label">Product image from your PC <em>Optional</em></span>
+                <span className="field-label">Image du produit depuis votre ordinateur <em>Facultatif</em></span>
                 <input id="product-image-upload" className="family-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
                 <label htmlFor="product-image-upload" className="family-upload-control">
                   <span className="family-upload-icon"><ImagePlus size={18} aria-hidden="true" /></span>
-                  <span><strong>{imageFile ? "Replace image" : "Choose an image from your PC"}</strong><small>PNG, JPG, WEBP or GIF</small></span>
+                  <span><strong>{imageFile ? "Remplacer l’image" : "Choisir une image sur votre ordinateur"}</strong><small>PNG, JPG, WEBP ou GIF</small></span>
                 </label>
               </div>
               {imageFile && <span className="selected-file">{imageFile.name}</span>}
             </div>
             <div className="product-settings-grid">
-              <Field label="Unit type">
+              <Field label="Type d’unité">
                 <select value={form.unitType} onChange={(e) => setForm({ ...form, unitType: e.target.value })}>
-                  <option value="EACH">Each (whole units)</option>
-                  <option value="WEIGHT">Weight (kg)</option>
+                  <option value="EACH">À l’unité (unités entières)</option>
+                  <option value="WEIGHT">Poids (kg)</option>
                 </select>
               </Field>
-              <Field label="Reorder point"><input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} /></Field>
-              <Field label="VAT rate (%)"><input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} /></Field>
+              <Field label="Seuil de réapprovisionnement"><input type="number" min="0" value={form.reorderPoint} onChange={(e) => setForm({ ...form, reorderPoint: e.target.value })} /></Field>
+              <Field label="Taux de TVA (%)"><input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: e.target.value })} /></Field>
             </div>
-            <label className="checkbox-row"><input type="checkbox" checked={form.perishable} onChange={(e) => setForm({ ...form, perishable: e.target.checked })} /> This product is perishable</label>
+            <label className="checkbox-row"><input type="checkbox" checked={form.perishable} onChange={(e) => setForm({ ...form, perishable: e.target.checked })} /> Ce produit est périssable</label>
             <div className="modal-actions product-modal-actions">
-              <button type="button" className="btn" onClick={() => setShowForm(false)} disabled={creating}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Adding..." : "Add product"}</button>
+              <button type="button" className="btn" onClick={() => setShowForm(false)} disabled={creating}>Annuler</button>
+              <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Ajout…" : "Ajouter le produit"}</button>
             </div>
           </form>
         </Modal>
       )}
 
       {showFamilyForm && (
-        <Modal title="Add a product family" icon={<Boxes size={16} />} onClose={closeFamilyForm}>
+        <Modal title="Ajouter une famille de produits" icon={<Boxes size={16} />} onClose={closeFamilyForm}>
           <Message ok={msg?.ok} text={msg?.text} />
           <form className="family-form" onSubmit={handleCreateFamily}>
-            <Field label="Family name" className="family-name-field">
-              <input type="text" value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="e.g. Water & soft drinks" autoFocus required />
+            <Field label="Nom de la famille" className="family-name-field">
+              <input type="text" value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="ex. Eau et boissons gazeuses" autoFocus required />
             </Field>
             <div className="family-image-layout">
               <div className="family-image-fields">
                 <div className="family-upload-field">
-                  <span className="field-label">Family image <em>Required</em></span>
+                  <span className="field-label">Image de la famille <em>Obligatoire</em></span>
                   <input id="family-image-upload" className="family-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setFamilyImageFile(e.target.files?.[0] || null)} />
                   <label htmlFor="family-image-upload" className="family-upload-control">
                     <span className="family-upload-icon"><ImagePlus size={18} aria-hidden="true" /></span>
-                    <span><strong>{familyImageFile ? "Replace image" : "Choose an image from your PC"}</strong><small>PNG, JPG, WEBP or GIF</small></span>
+                    <span><strong>{familyImageFile ? "Remplacer l’image" : "Choisir une image sur votre ordinateur"}</strong><small>PNG, JPG, WEBP ou GIF</small></span>
                   </label>
                   {familyImageFile && <span className="selected-file"><Check size={14} /> {familyImageFile.name}</span>}
                 </div>
               </div>
             </div>
             <div className="modal-actions family-modal-actions">
-              <button type="button" className="btn" onClick={closeFamilyForm} disabled={creatingFamily}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={creatingFamily}>{creatingFamily ? "Creating..." : "Create family"}</button>
+              <button type="button" className="btn" onClick={closeFamilyForm} disabled={creatingFamily}>Annuler</button>
+              <button type="submit" className="btn btn-primary" disabled={creatingFamily}>{creatingFamily ? "Création…" : "Créer la famille"}</button>
             </div>
           </form>
         </Modal>
