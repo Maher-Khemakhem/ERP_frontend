@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, ArrowRight, Boxes, CircleDollarSign, LayoutGrid, PackagePlus, RefreshCw, ShoppingCart, Tag, Truck } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Boxes, CircleDollarSign, LayoutGrid, PackagePlus, RefreshCw, ShoppingCart, Tag, TrendingUp, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApi } from "../../lib/apiClient.jsx";
 import { Panel, Message, Empty } from "../../design/components.jsx";
@@ -14,6 +14,56 @@ function formatTime(value) {
 function productName(products, productId) {
   const match = products.find((p) => p.id === productId);
   return match ? `${match.name} (${match.sku})` : productId;
+}
+
+function localDayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function SalesBars({ points, loading }) {
+  const maxValue = Math.max(...points.map((point) => point.amount), 1);
+  const periodTotal = points.reduce((sum, point) => sum + point.amount, 0);
+
+  return (
+    <div className="sales-chart">
+      <div className="sales-chart-summary">
+        <div><strong>{loading ? "—" : `${periodTotal.toFixed(3)} TND`}</strong><span>sales in the last 7 days</span></div>
+        <TrendingUp size={18} aria-hidden="true" />
+      </div>
+      <div className="sales-bars" role="img" aria-label="Sales over the last seven days">
+        {points.map((point) => (
+          <div className="sales-bar-column" key={point.key} title={`${point.label}: ${point.amount.toFixed(3)} TND`}>
+            <div className="sales-bar-track"><span className="sales-bar" style={{ height: `${Math.max((point.amount / maxValue) * 100, point.amount ? 8 : 2)}%` }} /></div>
+            <span className="sales-bar-label">{point.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="sales-chart-foot">Each bar shows completed ticket earnings for that day.</div>
+    </div>
+  );
+}
+
+function ReadinessChart({ totals, data }) {
+  const productCoverage = totals.productCount ? Math.round((totals.priceCount / totals.productCount) * 100) : 0;
+  const tillCoverage = data.tills.length ? Math.round((totals.openTills / data.tills.length) * 100) : 0;
+  const alertClearance = data.alerts.length ? Math.round((data.alerts.filter((alert) => alert.acknowledged).length / data.alerts.length) * 100) : 100;
+  const rows = [
+    { label: "Catalog priced", value: productCoverage, detail: `${totals.priceCount} of ${totals.productCount} products` },
+    { label: "Tills active", value: tillCoverage, detail: `${totals.openTills} of ${data.tills.length} tills open` },
+    { label: "Alerts cleared", value: alertClearance, detail: `${data.alerts.filter((alert) => alert.acknowledged).length} of ${data.alerts.length} alerts acknowledged` },
+  ];
+
+  return (
+    <div className="readiness-chart">
+      {rows.map((row) => (
+        <div className="readiness-row" key={row.label}>
+          <div className="readiness-heading"><span>{row.label}</span><strong>{row.value}%</strong></div>
+          <div className="readiness-track"><span style={{ width: `${row.value}%` }} /></div>
+          <small>{row.detail}</small>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function DashboardModule() {
@@ -84,6 +134,33 @@ export default function DashboardModule() {
     };
   }, [data]);
 
+  const salesTrend = useMemo(() => {
+    const now = new Date();
+    const points = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(now.getDate() - (6 - index));
+      return {
+        key: localDayKey(date),
+        label: date.toLocaleDateString([], { weekday: "short" }),
+        amount: 0,
+      };
+    });
+    const pointByDay = new Map(points.map((point) => [point.key, point]));
+
+    data.transactions.forEach((transaction) => {
+      if ((transaction.status || "").toUpperCase() !== "COMPLETED") return;
+      const date = new Date(transaction.completedAt || transaction.startedAt);
+      if (Number.isNaN(date.getTime())) return;
+      const point = pointByDay.get(localDayKey(date));
+      if (!point) return;
+      const amount = Number.parseFloat(String(transaction.total).replace(/[^\d.-]/g, ""));
+      if (Number.isFinite(amount)) point.amount += amount;
+    });
+
+    return points;
+  }, [data.transactions]);
+
   const recentActivity = useMemo(() => {
     const activity = [
       ...data.alerts
@@ -133,8 +210,9 @@ export default function DashboardModule() {
     <div>
       <div className="dashboard-heading">
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-sub">A quick view of the store: stock, pricing, cash and operational alerts.</p>
+          <div className="dashboard-kicker">Operations overview</div>
+          <h1 className="page-title">Today at the store</h1>
+          <p className="page-sub">A clear view of the floor, the tills, and anything that needs a hand.</p>
         </div>
         <button className="btn" onClick={loadDashboard} disabled={loading}>
           <RefreshCw size={14} className={loading ? "spin" : ""} />
@@ -143,6 +221,14 @@ export default function DashboardModule() {
       </div>
 
       <Message ok={false} text={error} />
+
+      {totals.openAlerts > 0 && (
+        <div className="dashboard-alert-strip" role="status">
+          <span className="dashboard-alert-icon"><AlertTriangle size={17} /></span>
+          <div><strong>{totals.openAlerts} {totals.openAlerts === 1 ? "item needs" : "items need"} attention</strong><span>Review low-stock alerts before the next delivery run.</span></div>
+          <Link to="/procurement" className="dashboard-alert-link">Review alerts <ArrowRight size={14} /></Link>
+        </div>
+      )}
 
       <div className="dashboard-actions" aria-label="Quick actions">
         {hasAnyRole(["ADMIN", "MANAGER", "CASHIER"]) && (
@@ -190,8 +276,17 @@ export default function DashboardModule() {
         ))}
       </div>
 
+      <div className="dashboard-grid two-up dashboard-analytics-grid">
+        <Panel title="Sales rhythm" icon={<TrendingUp size={16} />} className="dashboard-panel dashboard-chart-panel">
+          <SalesBars points={salesTrend} loading={loading} />
+        </Panel>
+        <Panel title="Store readiness" icon={<Activity size={16} />} className="dashboard-panel dashboard-chart-panel">
+          <ReadinessChart totals={totals} data={data} />
+        </Panel>
+      </div>
+
       <div className="dashboard-grid two-up">
-        <Panel title="Store pulse" icon={<Activity size={16} />}>
+        <Panel title="Store pulse" icon={<Activity size={16} />} className="dashboard-panel">
           <div className="pulse-stack">
             <div className="pulse-row">
               <span>Completed sales</span>
@@ -208,7 +303,7 @@ export default function DashboardModule() {
           </div>
         </Panel>
 
-        <Panel title="Recent activity" icon={<LayoutGrid size={16} />}>
+        <Panel title="Recent activity" icon={<LayoutGrid size={16} />} className="dashboard-panel">
           {recentActivity.length === 0 ? (
             <Empty>No live activity yet. Start by adding stock or opening a till.</Empty>
           ) : (

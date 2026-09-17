@@ -35,7 +35,11 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       if (setupRequired) {
-        await registerFirstAdmin(form);
+        await registerFirstAdmin({
+          username: form.username,
+          displayName: form.displayName,
+          password: form.password,
+        });
       } else {
         await login({ username: form.username, password: form.password });
       }
@@ -49,12 +53,12 @@ export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-brand"><span className="brand-mark">Counter</span><span>Store operations</span></div>
+        <div className="auth-brand"><span className="auth-brand-lockup"><span className="auth-brand-symbol">C</span><span className="brand-mark">Counter</span></span><span>Store operations</span></div>
         <div className="auth-heading">
           {setupRequired ? <UserPlus size={21} /> : <LockKeyhole size={21} />}
           <div>
             <h1>{checkingSetup ? "Connecting" : setupRequired ? "Create administrator" : "Sign in"}</h1>
-            <p>{checkingSetup ? "Checking whether this store needs its first user." : setupRequired ? "Create the first account to secure this store." : "Use your store account to continue."}</p>
+            <p>{checkingSetup ? "Checking whether the system needs its first user." : setupRequired ? "Create the first account to secure the system." : "Use your account to continue."}</p>
           </div>
         </div>
         {message && <div className="auth-error" role="alert">{message}</div>}
@@ -81,19 +85,21 @@ export default function LoginPage() {
         {setupRequired && <p className="auth-note">The first account automatically receives the ADMIN role. Additional users can be created from Users after signing in.</p>}
       </section>
       <style>{`
-        .auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--paper); color: var(--ink); }
-        .auth-card { width: min(100%, 420px); padding: 30px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; box-shadow: 0 18px 50px rgba(31, 72, 48, .09); }
-        .auth-brand { display: flex; flex-direction: column; gap: 3px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
-        .auth-brand .brand-mark { color: var(--green-deep); font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
-        .auth-heading { display: flex; gap: 12px; align-items: flex-start; margin: 32px 0 24px; color: var(--green-deep); }
-        .auth-heading h1 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 25px; }
+        .auth-page { min-height: 100vh; display: grid; place-items: center; padding: 28px 18px; background: radial-gradient(circle at 12% 10%, #FFF9EC 0, transparent 30%), var(--paper); color: var(--ink); }
+        .auth-card { width: min(100%, 440px); padding: 34px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 20px; box-shadow: var(--shadow-md); }
+        .auth-brand { display: flex; flex-direction: column; gap: 5px; color: var(--ink-soft); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+        .auth-brand-lockup { display: flex; align-items: center; gap: 10px; }
+        .auth-brand-symbol { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px 10px 10px 2px; background: #8CCBEA; color: var(--green-deep); font-family: 'Fraunces', Georgia, serif; font-size: 21px; font-weight: 700; }
+        .auth-brand .brand-mark { color: var(--green-deep); font-family: 'Fraunces', Georgia, serif; font-size: 25px; font-weight: 700; letter-spacing: -.03em; text-transform: none; }
+        .auth-heading { display: flex; gap: 12px; align-items: flex-start; margin: 38px 0 26px; color: var(--green-deep); }
+        .auth-heading h1 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 30px; letter-spacing: -.03em; }
         .auth-heading p { margin: 5px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
         .auth-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
-        .auth-field span { color: var(--ink-soft); font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
-        .auth-field input { width: 100%; border: 1px solid var(--hairline-strong); border-radius: 7px; padding: 11px 12px; background: #FBFBF7; color: var(--ink); font: inherit; }
-        .auth-field input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
-        .auth-submit { width: 100%; justify-content: center; margin-top: 8px; padding: 11px 14px; }
-        .auth-error { margin-bottom: 16px; padding: 10px 12px; border-radius: 7px; background: var(--red-bg); color: var(--red); font-size: 13px; }
+        .auth-field span { color: var(--ink-soft); font-size: 12px; font-weight: 700; letter-spacing: .01em; }
+        .auth-field input { width: 100%; min-height: 44px; border: 1px solid var(--hairline-strong); border-radius: 9px; padding: 11px 12px; background: #FCFAF4; color: var(--ink); font: inherit; }
+        .auth-field input:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--green); }
+        .auth-submit { width: 100%; justify-content: center; margin-top: 10px; min-height: 46px; padding: 11px 14px; border-radius: 10px; }
+        .auth-error { margin-bottom: 16px; padding: 11px 12px; border-radius: 9px; background: var(--red-bg); color: var(--red); font-size: 13px; }
         .auth-note { margin: 18px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
       `}</style>
     </main>

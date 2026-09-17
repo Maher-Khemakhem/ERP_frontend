@@ -46,11 +46,11 @@ export function ApiProvider({ children }) {
         const res = await fetch(`${apiBase}${path}`, {
           method,
           headers: {
-            ...(body ? { "Content-Type": "application/json" } : {}),
+            ...(body && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
             ...authorization,
             ...(headers || {}),
           },
-          body: body ? JSON.stringify(body) : undefined,
+          body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
         });
         const text = await res.text();
         if (!res.ok) {
