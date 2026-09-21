@@ -89,7 +89,9 @@ export function ApiProvider({ children }) {
 
   const hasAnyRole = useCallback((roles = []) => {
     if (!auth?.user?.roles) return false;
-    return roles.length === 0 || roles.some((role) => auth.user.roles.includes(role));
+    // An omitted permission list must never grant access by accident. Every
+    // protected module declares at least one explicit role.
+    return roles.length > 0 && roles.some((role) => auth.user.roles.includes(role));
   }, [auth?.user?.roles]);
 
   return (

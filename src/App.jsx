@@ -13,7 +13,7 @@ import UserManagementModule from "./modules/admin/UserManagementModule.jsx";
 import PhoneScannerPage from "./modules/pos/PhoneScannerPage.jsx";
 
 const MODULES = [
-  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutGrid, status: "active", roles: [] },
+  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutGrid, status: "active", roles: ["ADMIN"] },
   { key: "inventory", path: "/inventory", label: "Inventory", icon: Package, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"] },
   { key: "pricing", path: "/pricing", label: "Pricing", icon: Tag, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"] },
   { key: "pos", path: "/pos", label: "POS", icon: ShoppingCart, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"] },
@@ -21,6 +21,14 @@ const MODULES = [
   { key: "finance", path: "/finance", label: "Finance", icon: Wallet, status: "active", roles: ["ADMIN", "MANAGER", "ACCOUNTANT"] },
   { key: "users", path: "/users", label: "Users", icon: Shield, status: "active", roles: ["ADMIN"] },
 ];
+
+function moduleByKey(key) {
+  return MODULES.find((module) => module.key === key);
+}
+
+function landingPathForRoles(roles = []) {
+  return MODULES.find((module) => module.status === "active" && module.roles.some((role) => roles.includes(role)))?.path || "/";
+}
 
 function Sidebar() {
   const location = useLocation();
@@ -81,8 +89,13 @@ function ApiConnectionControl() {
 }
 
 function RoleRoute({ roles, children }) {
-  const { hasAnyRole } = useApi();
-  return hasAnyRole(roles) ? children : <Navigate to="/dashboard" replace />;
+  const { auth, hasAnyRole } = useApi();
+  return hasAnyRole(roles) ? children : <Navigate to={landingPathForRoles(auth?.user?.roles)} replace />;
+}
+
+function LandingRedirect() {
+  const { auth } = useApi();
+  return <Navigate to={landingPathForRoles(auth?.user?.roles)} replace />;
 }
 
 export default function App() {
@@ -109,15 +122,15 @@ export default function App() {
           <button type="button" className="btn btn-small" onClick={logout}><LogOut size={14} /> Sign out</button>
         </div>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardModule />} />
-          <Route path="/inventory" element={<RoleRoute roles={MODULES[1].roles}><InventoryModule /></RoleRoute>} />
-          <Route path="/pricing" element={<RoleRoute roles={MODULES[2].roles}><PricingModule /></RoleRoute>} />
-          <Route path="/pos" element={<RoleRoute roles={MODULES[3].roles}><POSModule /></RoleRoute>} />
-          <Route path="/procurement" element={<RoleRoute roles={MODULES[4].roles}><ProcurementModule /></RoleRoute>} />
-          <Route path="/finance" element={<RoleRoute roles={MODULES[5].roles}><FinanceModule /></RoleRoute>} />
-          <Route path="/users" element={<RoleRoute roles={MODULES[6].roles}><UserManagementModule /></RoleRoute>} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<LandingRedirect />} />
+          <Route path="/dashboard" element={<RoleRoute roles={moduleByKey("dashboard").roles}><DashboardModule /></RoleRoute>} />
+          <Route path="/inventory" element={<RoleRoute roles={moduleByKey("inventory").roles}><InventoryModule /></RoleRoute>} />
+          <Route path="/pricing" element={<RoleRoute roles={moduleByKey("pricing").roles}><PricingModule /></RoleRoute>} />
+          <Route path="/pos" element={<RoleRoute roles={moduleByKey("pos").roles}><POSModule /></RoleRoute>} />
+          <Route path="/procurement" element={<RoleRoute roles={moduleByKey("procurement").roles}><ProcurementModule /></RoleRoute>} />
+          <Route path="/finance" element={<RoleRoute roles={moduleByKey("finance").roles}><FinanceModule /></RoleRoute>} />
+          <Route path="/users" element={<RoleRoute roles={moduleByKey("users").roles}><UserManagementModule /></RoleRoute>} />
+          <Route path="*" element={<LandingRedirect />} />
         </Routes>
       </main>
     </div>
