@@ -20,6 +20,14 @@ function formatMoney(value) {
   return `${n.toFixed(3)} TND`;
 }
 
+function ticketStatusLabel(status) {
+  return { IN_PROGRESS: "En cours", COMPLETED: "Terminé", VOIDED: "Annulé" }[status] || status || "Inconnu";
+}
+
+function paymentMethodLabel(method) {
+  return { CASH: "Espèces", CARD: "Carte" }[method] || method || "";
+}
+
 const PRODUCT_IMAGE_URLS = {
   water: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=640&q=80",
   milk: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=640&q=80",
@@ -115,7 +123,7 @@ export default function POSModule() {
       const data = await request("/api/pos/tills");
       setTills(Array.isArray(data) ? data : []);
     } catch (err) {
-      setTillsError(err.message || "Could not reach the POS service.");
+      setTillsError(err.message || "Impossible de joindre le service de caisse.");
     } finally {
       setTillsLoading(false);
     }
@@ -128,18 +136,18 @@ export default function POSModule() {
   return (
     <div>
       <h1 className="page-title">POS</h1>
-      <p className="page-sub">Open a drawer, ring up items, take payment.</p>
+      <p className="page-sub">Ouvrez un tiroir-caisse, enregistrez les articles et encaissez les paiements.</p>
       <style>{posNavigationStyles}</style>
 
-      <div className="pos-navigation" role="toolbar" aria-label="POS workflows">
+      <div className="pos-navigation" role="toolbar" aria-label="Flux de travail de la caisse">
         <button type="button" className={`pos-navigation-action ${tab === "checkout" ? "active" : ""}`} onClick={() => setTab("checkout")}>
-          <ShoppingCart size={16} /><span><strong>Checkout</strong><small>Scan and take payment</small></span>
+          <ShoppingCart size={16} /><span><strong>Encaissement</strong><small>Scanner et encaisser</small></span>
         </button>
         <button type="button" className={`pos-navigation-action ${tab === "tills" ? "active" : ""}`} onClick={() => setTab("tills")}>
-          <Lock size={16} /><span><strong>Tills</strong><small>Drawers and cash sessions</small></span>
+          <Lock size={16} /><span><strong>Caisses</strong><small>Tiroirs et sessions de caisse</small></span>
         </button>
         <button type="button" className={`pos-navigation-action ${tab === "tickets" ? "active" : ""}`} onClick={() => setTab("tickets")}>
-          <Receipt size={16} /><span><strong>Tickets</strong><small>Sales history and receipts</small></span>
+          <Receipt size={16} /><span><strong>Tickets</strong><small>Historique des ventes et reçus</small></span>
         </button>
       </div>
 
@@ -194,7 +202,7 @@ function TillsTab({ tills, loading, error, onRefresh }) {
     event.preventDefault();
     const tillNumber = newTillNumber.trim();
     if (!tillNumber) {
-      setCreateTillMsg({ ok: false, text: "Enter a till name or number before creating it." });
+      setCreateTillMsg({ ok: false, text: "Saisissez un nom ou un numéro de caisse avant de la créer." });
       return;
     }
 
@@ -206,10 +214,10 @@ function TillsTab({ tills, loading, error, onRefresh }) {
         body: { tillNumber },
       });
       setNewTillNumber("");
-      setCreateTillMsg({ ok: true, text: `Till "${tillNumber}" created.` });
+      setCreateTillMsg({ ok: true, text: `Caisse « ${tillNumber} » créée.` });
       onRefresh();
     } catch (err) {
-      setCreateTillMsg({ ok: false, text: err.message || "Could not create the till." });
+      setCreateTillMsg({ ok: false, text: err.message || "Impossible de créer la caisse." });
     } finally {
       setCreatingTill(false);
     }
@@ -217,7 +225,7 @@ function TillsTab({ tills, loading, error, onRefresh }) {
 
   return (
     <div className="grid">
-      <Panel title="Cash drawer status" icon={<ShoppingCart size={16} />}>
+      <Panel title="État du tiroir-caisse" icon={<ShoppingCart size={16} />}>
         <Message ok={false} text={error} />
         {!error && (
           <div className={`drawer-state ${openTill ? "is-open" : "is-closed"}`}>
@@ -225,11 +233,11 @@ function TillsTab({ tills, loading, error, onRefresh }) {
               {openTill ? <Unlock size={28} /> : <Lock size={28} />}
             </div>
             <div>
-              <div className="drawer-state-label">{openTill ? "Drawer open" : "All tills closed"}</div>
+              <div className="drawer-state-label">{openTill ? "Tiroir ouvert" : "Toutes les caisses sont fermées"}</div>
               <div className="drawer-state-meta">
                 {openTill
                   ? `${openTill.tillNumber} · active session in progress`
-                  : "No active till. Open a drawer from the Checkout tab to start selling."}
+                  : "Aucune caisse active. Ouvrez un tiroir depuis l’onglet Encaissement pour commencer à vendre."}
               </div>
             </div>
           </div>
@@ -240,16 +248,16 @@ function TillsTab({ tills, loading, error, onRefresh }) {
           disabled={loading}
           style={{ width: "100%", justifyContent: "center", marginTop: 14 }}
         >
-          <RefreshCw size={14} /> {loading ? "Refreshing…" : "Refresh status"}
+          <RefreshCw size={14} /> {loading ? "Actualisation…" : "Actualiser l’état"}
         </button>
       </Panel>
 
       <Panel
-        title="All tills"
+        title="Toutes les caisses"
         icon={<ShoppingBag size={16} />}
         right={
           <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: "5px 10px" }}>
-            <RefreshCw size={13} /> Refresh
+            <RefreshCw size={13} /> Actualiser
           </button>
         }
       >
@@ -259,19 +267,19 @@ function TillsTab({ tills, loading, error, onRefresh }) {
             type="text"
             value={newTillNumber}
             onChange={(e) => setNewTillNumber(e.target.value)}
-            placeholder="New till name"
-            aria-label="New till name"
+            placeholder="Nom de la nouvelle caisse"
+            aria-label="Nom de la nouvelle caisse"
             style={{ flex: 1 }}
           />
           <button type="submit" className="btn btn-primary" disabled={creatingTill || !newTillNumber.trim()}>
-            {creatingTill ? "Creating…" : "Create till"}
+            {creatingTill ? "Création…" : "Créer la caisse"}
           </button>
         </form>
 
-        {!error && tills.length === 0 && !loading && <Empty>No tills yet.</Empty>}
+        {!error && tills.length === 0 && !loading && <Empty>Aucune caisse pour le moment.</Empty>}
         {[...tills].sort((a, b) => a.tillNumber.localeCompare(b.tillNumber)).map((t) => {
-          const lastOpened = t.openedAt ? new Date(t.openedAt).toLocaleString() : "Never";
-          const lastClosed = t.closedAt ? new Date(t.closedAt).toLocaleString() : "Never";
+          const lastOpened = t.openedAt ? new Date(t.openedAt).toLocaleString("fr-FR") : "Jamais";
+          const lastClosed = t.closedAt ? new Date(t.closedAt).toLocaleString("fr-FR") : "Jamais";
           const cashValue = t.cashInDrawer ? `${t.cashInDrawer} TND` : "0.000 TND";
 
           return (
@@ -281,12 +289,12 @@ function TillsTab({ tills, loading, error, onRefresh }) {
                   <div className="tag-name">{t.tillNumber}</div>
                   <div className="tag-sku">
                     {t.status === "OPEN"
-                      ? `Cash in drawer: ${cashValue} · Cashier: ${t.cashierName || "Unassigned"}`
-                      : `Last opened: ${lastOpened} · Last closed: ${lastClosed}`}
+                      ? `Espèces dans le tiroir : ${cashValue} · Caissier : ${t.cashierName || "Non attribué"}`
+                      : `Dernière ouverture : ${lastOpened} · Dernière fermeture : ${lastClosed}`}
                   </div>
-                  {t.status === "CLOSED" && <div className="tag-sku">Last cash counted: {cashValue}</div>}
+                  {t.status === "CLOSED" && <div className="tag-sku">Dernier comptage des espèces : {cashValue}</div>}
                 </div>
-                <Chip warn={t.status === "CLOSED"}>{t.status === "OPEN" ? "OPEN" : "CLOSED"}</Chip>
+                <Chip warn={t.status === "CLOSED"}>{t.status === "OPEN" ? "OUVERTE" : "FERMÉE"}</Chip>
               </div>
             </ShelfTag>
           );
@@ -479,7 +487,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
           return {
             id: line.id,
             productId: line.productId,
-            productName: product?.name || "Product",
+            productName: product?.name || "Produit",
             quantityValue: parseQuantityValue(line.quantity),
             unitType: product?.unitType ?? "EACH",
             linePrice: line.lineTotal,
@@ -497,7 +505,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         setVoidConfirmOpen(false);
         setTendered("");
       } catch (err) {
-        setTransactionMsg({ ok: false, text: err.message || "Could not load that ticket." });
+        setTransactionMsg({ ok: false, text: err.message || "Impossible de charger ce ticket." });
       }
     },
     [products, request]
@@ -533,7 +541,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       return;
     }
     if (!cashierName.trim()) {
-      setSessionMsg({ ok: false, text: "Cashier name is required to open a till." });
+      setSessionMsg({ ok: false, text: "Le nom du caissier est obligatoire pour ouvrir une caisse." });
       return;
     }
     setOpeningSession(true);
@@ -555,7 +563,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       setSessionModal(null);
       onTillsChanged?.();
     } catch (err) {
-      setSessionMsg({ ok: false, text: err.message || "Could not open a session." });
+      setSessionMsg({ ok: false, text: err.message || "Impossible d’ouvrir une session." });
     } finally {
       setOpeningSession(false);
     }
@@ -576,7 +584,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       setTendered("");
       setTimeout(() => barcodeRef.current?.focus(), 0);
     } catch (err) {
-      setTransactionMsg({ ok: false, text: err.message || "Could not start a new ticket." });
+      setTransactionMsg({ ok: false, text: err.message || "Impossible de démarrer un nouveau ticket." });
     } finally {
       setStartingTx(false);
     }
@@ -601,7 +609,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       setPhonePairing({ ...pairing, scannerUrl });
       setPhonePairingOpen(true);
     } catch (err) {
-      setPhonePairingMsg({ ok: false, text: err.message || "Could not pair the phone scanner." });
+      setPhonePairingMsg({ ok: false, text: err.message || "Impossible d’associer le scanner mobile." });
     } finally {
       setPhonePairingLoading(false);
     }
@@ -638,7 +646,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         const left = Math.max(0, remaining);
         setScanMsg({
           ok: false,
-          text: `Out of stock: only ${left.toFixed(3).replace(/\.000$/, "").replace(/(\.\d*?)0+$/, "$1")} available for this product.`,
+          text: `Rupture de stock : seuls ${left.toFixed(3).replace(/\.000$/, "").replace(/(\.\d*?)0+$/, "$1")} sont disponibles pour ce produit.`,
         });
         return false;
       }
@@ -657,7 +665,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       return;
     }
     if (unitType === "EACH" && !Number.isInteger(qty)) {
-      setScanMsg({ ok: false, text: "This item is sold by the each — quantity must be a whole number." });
+      setScanMsg({ ok: false, text: "Cet article est vendu à l’unité : la quantité doit être un nombre entier." });
       return;
     }
     const hasStock = await checkStockAvailability(productId, qty);
@@ -688,7 +696,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
           {
             id: data.lineId,
             productId,
-            productName: product?.name || "Product",
+            productName: product?.name || "Produit",
             quantityValue: qty,
             unitType,
             linePrice: data.linePrice,
@@ -700,7 +708,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       setLastScan({ name: product?.name || "Item", qty, unit: unitType === "WEIGHT" ? "kg" : "×" });
       setTimeout(() => setLastScan(null), 1800);
     } catch (err) {
-      setScanMsg({ ok: false, text: err.message || "Could not add that line." });
+      setScanMsg({ ok: false, text: err.message || "Impossible d’ajouter cette ligne." });
     } finally {
       setScanning(false);
     }
@@ -712,7 +720,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
     if (!code) return;
     const product = products.find((p) => p.sku === code);
     if (!product) {
-      setScanMsg({ ok: false, text: `No product found for barcode "${code}".` });
+      setScanMsg({ ok: false, text: `Aucun produit trouvé pour le code-barres « ${code} ».` });
       setBarcodeValue("");
       return;
     }
@@ -740,7 +748,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       return;
     }
     if (unitType === "EACH" && !Number.isInteger(qty)) {
-      setScanMsg({ ok: false, text: "This item is sold by the each — quantity must be a whole number." });
+      setScanMsg({ ok: false, text: "Cet article est vendu à l’unité : la quantité doit être un nombre entier." });
       return;
     }
     const hasStock = await checkStockAvailability(line.productId, qty, line.id);
@@ -758,7 +766,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
             netPrice: data.netPrice, vatAmount: data.vatAmount }
         : l)));
     } catch (err) {
-      setScanMsg({ ok: false, text: err.message || "Could not update that line." });
+      setScanMsg({ ok: false, text: err.message || "Impossible de modifier cette ligne." });
       // The delete may have already gone through server-side even though the re-add
       // failed — resync from the server instead of trusting stale local state.
       loadTransaction(transactionId);
@@ -774,7 +782,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       await request(`/api/pos/transactions/${transactionId}/lines/${line.id}`, { method: "DELETE" });
       setLines((prev) => prev.filter((l) => l.id !== line.id));
     } catch (err) {
-      setScanMsg({ ok: false, text: err.message || "Could not remove that line." });
+      setScanMsg({ ok: false, text: err.message || "Impossible de supprimer cette ligne." });
     } finally {
       markLinePending(line.id, false);
     }
@@ -791,7 +799,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       })
     );
     if (stockCheck.some((ok) => ok === false)) {
-      setTransactionMsg({ ok: false, text: "Out of stock: one or more items in the ticket exceed current inventory." });
+      setTransactionMsg({ ok: false, text: "Rupture de stock : un ou plusieurs articles du ticket dépassent le stock disponible." });
       return;
     }
     setCompleting(true);
@@ -811,14 +819,14 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         paymentMethod,
         completedAt: new Date().toISOString(),
       });
-      setTransactionMsg({ ok: true, text: "Sale completed. Stock deducted and revenue recorded." });
+      setTransactionMsg({ ok: true, text: "Vente terminée. Stock déduit et chiffre d’affaires enregistré." });
       disconnectPhoneScanner();
       if (paymentMethod === "CASH") {
         try { await refreshSession(session.id); } catch { /* best effort */ }
       }
       onTillsChanged?.();
     } catch (err) {
-      setTransactionMsg({ ok: false, text: err.message || "Could not complete the sale." });
+      setTransactionMsg({ ok: false, text: err.message || "Impossible de terminer la vente." });
     } finally {
       setCompleting(false);
     }
@@ -830,14 +838,14 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
     try {
       await request(`/api/pos/transactions/${transactionId}/void`, {
         method: "POST",
-        body: { reason: voidReason.trim() || "Voided by cashier" },
+        body: { reason: voidReason.trim() || "Annulée par le caissier" },
       });
       setCompleted(true);
       disconnectPhoneScanner();
       setVoidConfirmOpen(false);
-      setTransactionMsg({ ok: true, text: "Ticket voided." });
+      setTransactionMsg({ ok: true, text: "Ticket annulé." });
     } catch (err) {
-      setTransactionMsg({ ok: false, text: err.message || "Could not void the ticket." });
+      setTransactionMsg({ ok: false, text: err.message || "Impossible d’annuler le ticket." });
     } finally {
       setVoiding(false);
     }
@@ -860,7 +868,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
   async function handleCloseSession(e) {
     e.preventDefault();
     if (!countedCash) {
-      setCloseMsg({ ok: false, text: "Enter the counted cash amount." });
+      setCloseMsg({ ok: false, text: "Saisissez le montant des espèces comptées." });
       return;
     }
     setClosing(true);
@@ -870,7 +878,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         method: "POST",
         body: { countedCash: Number(countedCash) },
       });
-      setCloseMsg({ ok: true, text: "Session closed and reconciled." });
+      setCloseMsg({ ok: true, text: "Session fermée et rapprochée." });
       disconnectPhoneScanner();
       setSession((s) => ({ ...s, status: "CLOSED" }));
       setSessionModal(null);
@@ -878,7 +886,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       setLines([]);
       onTillsChanged?.();
     } catch (err) {
-      setCloseMsg({ ok: false, text: err.message || "Could not close the session." });
+      setCloseMsg({ ok: false, text: err.message || "Impossible de fermer la session." });
     } finally {
       setClosing(false);
     }
@@ -922,13 +930,13 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       <PosAlertStack alerts={alerts} onDismiss={(id) => setAlerts((current) => current.filter((alert) => alert.id !== id))} />
       {/* Stepper */}
       <div className="pos-stepper">
-        <Step n={1} active={step === 1} done={step > 1} label="Open drawer" icon={<Lock size={14} />} />
+        <Step n={1} active={step === 1} done={step > 1} label="Ouvrir le tiroir" icon={<Lock size={14} />} />
         <div className="pos-stepper-line" />
-        <Step n={2} active={step === 2} done={step > 2} label="Start sale" icon={<Receipt size={14} />} />
+        <Step n={2} active={step === 2} done={step > 2} label="Démarrer la vente" icon={<Receipt size={14} />} />
         <div className="pos-stepper-line" />
-        <Step n={3} active={step === 3} done={false} label="Scan items" icon={<ScanLine size={14} />} />
+        <Step n={3} active={step === 3} done={false} label="Scanner les articles" icon={<ScanLine size={14} />} />
         <div className="pos-stepper-line" />
-        <Step n={4} active={step === 4} done={false} label="Take payment" icon={<CircleDollarSign size={14} />} />
+        <Step n={4} active={step === 4} done={false} label="Encaisser" icon={<CircleDollarSign size={14} />} />
       </div>
 
       <div className="pos-grid">
@@ -936,63 +944,63 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         <div className="pos-col pos-col-left">
           {/* Drawer */}
           <div className="pos-action-bar">
-            {!sessionOpen && <button className="btn btn-primary" onClick={() => { setSessionMsg(null); setSessionModal("open"); }}><Unlock size={14} /> Open drawer</button>}
-            {sessionOpen && !transactionId && <button className="btn btn-primary" onClick={handleStartTransaction} disabled={startingTx}><Receipt size={14} /> {startingTx ? "Starting…" : "Start sale"}</button>}
-            {sessionOpen && <button className="btn" onClick={() => { setCloseMsg(null); setSessionModal("close"); }}><Lock size={14} /> Close drawer</button>}
-            {transactionId && !completed && <button className="btn" onClick={() => setScannerModalOpen(true)}><Barcode size={14} /> Scan barcode</button>}
-            {transactionId && !completed && <button className="btn" onClick={handleOpenPhoneScanner} disabled={phonePairingLoading}><Smartphone size={14} /> {phonePairingLoading ? "Pairing…" : "Use phone"}</button>}
+            {!sessionOpen && <button className="btn btn-primary" onClick={() => { setSessionMsg(null); setSessionModal("open"); }}><Unlock size={14} /> Ouvrir le tiroir</button>}
+            {sessionOpen && !transactionId && <button className="btn btn-primary" onClick={handleStartTransaction} disabled={startingTx}><Receipt size={14} /> {startingTx ? "Démarrage…" : "Démarrer la vente"}</button>}
+            {sessionOpen && <button className="btn" onClick={() => { setCloseMsg(null); setSessionModal("close"); }}><Lock size={14} /> Fermer le tiroir</button>}
+            {transactionId && !completed && <button className="btn" onClick={() => setScannerModalOpen(true)}><Barcode size={14} /> Scanner un code-barres</button>}
+            {transactionId && !completed && <button className="btn" onClick={handleOpenPhoneScanner} disabled={phonePairingLoading}><Smartphone size={14} /> {phonePairingLoading ? "Association…" : "Utiliser le téléphone"}</button>}
           </div>
 
           {/* Scanner */}
-          {phonePairing && <div className="phone-pairing-status pos-phone-status"> <Smartphone size={14} /><span><strong>Phone scanner paired</strong><small>Scans appear in this ticket.</small></span><button type="button" className="btn btn-small" onClick={() => setPhonePairingOpen(true)}>Show QR</button><button type="button" className="btn btn-small btn-danger" onClick={disconnectPhoneScanner}>Disconnect</button></div>}
+          {phonePairing && <div className="phone-pairing-status pos-phone-status"> <Smartphone size={14} /><span><strong>Scanner mobile associé</strong><small>Les scans apparaissent dans ce ticket.</small></span><button type="button" className="btn btn-small" onClick={() => setPhonePairingOpen(true)}>Afficher le QR</button><button type="button" className="btn btn-small btn-danger" onClick={disconnectPhoneScanner}>Déconnecter</button></div>}
 
           {/* Totals & payment */}
           {transactionId && (
-            <Panel title="Payment" icon={<CircleDollarSign size={16} />} className="pos-payment-panel">
+            <Panel title="Paiement" icon={<CircleDollarSign size={16} />} className="pos-payment-panel">
               <Message ok={transactionMsg?.ok} text={transactionMsg?.text} />
               <div className="totals-card">
                 <div className="totals-row">
-                  <span>Subtotal (excl. VAT)</span>
+                  <span>Sous-total (hors TVA)</span>
                   <strong>{formatMoney(netTotal)}</strong>
                 </div>
                 <div className="totals-row">
-                  <span>VAT</span>
+                  <span>TVA</span>
                   <strong>{formatMoney(vatTotal)}</strong>
                 </div>
                 <div className="totals-row">
-                  <span>Items</span>
+                  <span>Articles</span>
                   <strong>{itemCount}</strong>
                 </div>
                 <div className="totals-row big">
-                  <span>Total (incl. VAT)</span>
+                  <span>Total (TTC)</span>
                   <strong>{formatMoney(total)}</strong>
                 </div>
               </div>
 
               {!completed && (
                 <>
-                  <Field label="Payment method">
+                  <Field label="Mode de paiement">
                     <div className="payment-toggle">
                       <button
                         type="button"
                         className={`payment-option ${paymentMethod === "CASH" ? "active" : ""}`}
                         onClick={() => setPaymentMethod("CASH")}
                       >
-                        <Banknote size={16} /> Cash
+                        <Banknote size={16} /> Espèces
                       </button>
                       <button
                         type="button"
                         className={`payment-option ${paymentMethod === "CARD" ? "active" : ""}`}
                         onClick={() => setPaymentMethod("CARD")}
                       >
-                        <CreditCard size={16} /> Card
+                        <CreditCard size={16} /> Carte
                       </button>
                     </div>
                   </Field>
 
                   {paymentMethod === "CASH" && (
                     <>
-                      <Field label="Cash tendered">
+                      <Field label="Espèces remises">
                         <input
                           type="number"
                           min="0"
@@ -1019,14 +1027,14 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                           className="btn"
                           onClick={() => setTendered(total > 0 ? total.toFixed(3) : "")}
                           style={{ padding: "6px 10px" }}
-                          title="Exact amount"
+                          title="Montant exact"
                         >
                           Exact
                         </button>
                       </div>
                       {tendered && (
                         <div className={`change-due ${changeDue > 0 ? "ok" : tenderedNum < total ? "short" : ""}`}>
-                          <span>{changeDue > 0 ? "Change due" : tenderedNum < total ? "Short by" : "Tendered"}</span>
+                          <span>{changeDue > 0 ? "Monnaie à rendre" : tenderedNum < total ? "Manque" : "Montant remis"}</span>
                           <strong>{formatMoney(changeDue > 0 ? changeDue : Math.abs(total - tenderedNum))}</strong>
                         </div>
                       )}
@@ -1041,7 +1049,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                     {completing ? "Completing…" : (<><CircleDollarSign size={16} /> Charge {formatMoney(total)}</>)}
                   </button>
                   {paymentMethod === "CASH" && tenderedNum < total && total > 0 && (
-                    <div className="complete-hint">Need at least {formatMoney(total)} in cash.</div>
+                    <div className="complete-hint">Il faut au moins {formatMoney(total)} en espèces.</div>
                   )}
 
                   {!voidConfirmOpen && (
@@ -1050,22 +1058,22 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                       onClick={() => setVoidConfirmOpen(true)}
                       disabled={voiding || lines.length === 0}
                     >
-                      <XCircle size={13} /> Void this sale
+                      <XCircle size={13} /> Annuler cette vente
                     </button>
                   )}
 
                   {voidConfirmOpen && (
                     <div className="void-confirm">
                       <div className="void-confirm-title">
-                        <AlertTriangle size={14} /> This can't be undone.
+                        <AlertTriangle size={14} /> Cette action est irréversible.
                       </div>
-                      <Field label="Reason for void (optional)">
+                      <Field label="Motif de l’annulation (facultatif)">
                         <input
                           type="text"
                           autoFocus
                           value={voidReason}
                           onChange={(e) => setVoidReason(e.target.value)}
-                          placeholder="e.g. customer changed their mind"
+                          placeholder="ex. le client a changé d’avis"
                         />
                       </Field>
                       <div className="modal-actions">
@@ -1075,7 +1083,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                           onClick={() => { setVoidConfirmOpen(false); setVoidReason(""); }}
                           disabled={voiding}
                         >
-                          Cancel
+                          Annuler
                         </button>
                         <button
                           type="button"
@@ -1083,7 +1091,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                           onClick={handleVoid}
                           disabled={voiding}
                         >
-                          {voiding ? "Voiding…" : "Confirm void"}
+                          {voiding ? "Annulation…" : "Confirmer l’annulation"}
                         </button>
                       </div>
                     </div>
@@ -1098,14 +1106,14 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                     onClick={() => printReceipt(completedTicket, products)}
                     style={{ width: "100%", justifyContent: "center" }}
                   >
-                    <Printer size={14} /> Print receipt
+                    <Printer size={14} /> Imprimer le reçu
                   </button>
                   <button
                     className="btn"
                     onClick={handleNewSale}
                     style={{ width: "100%", justifyContent: "center" }}
                   >
-                    Start a new sale
+                    Démarrer une nouvelle vente
                   </button>
                 </div>
               )}
@@ -1117,7 +1125,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         <div className="pos-col pos-col-right">
           {/* Product browser — only when a sale is active and not yet completed */}
           {transactionId && !completed && (
-            <Panel title="Products" icon={<PackageSearch size={16} />} className="pos-product-panel">
+            <Panel title="Produits" icon={<PackageSearch size={16} />} className="pos-product-panel">
               <div className="browser-controls">
                 <div className="scanner-input-wrap" style={{ flex: 1 }}>
                   <Search size={16} className="scanner-icon" />
@@ -1126,8 +1134,8 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                     type="text"
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
-                    placeholder="Search by name or SKU…"
-                    aria-label="Search products"
+                    placeholder="Rechercher par nom ou SKU…"
+                    aria-label="Rechercher des produits"
                   />
                 </div>
                 <div className="filter-chips">
@@ -1135,21 +1143,21 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                     type="button"
                     className={`filter-chip ${unitFilter === "ALL" ? "active" : ""}`}
                     onClick={() => setUnitFilter("ALL")}
-                  >All</button>
+                  >Tous</button>
                   <button
                     type="button"
                     className={`filter-chip ${unitFilter === "EACH" ? "active" : ""}`}
                     onClick={() => setUnitFilter("EACH")}
-                  >Each</button>
+                  >À l’unité</button>
                   <button
                     type="button"
                     className={`filter-chip ${unitFilter === "WEIGHT" ? "active" : ""}`}
                     onClick={() => setUnitFilter("WEIGHT")}
-                  >Weight</button>
+                  >Poids</button>
                 </div>
               </div>
               {filteredProducts.length === 0 ? (
-                <Empty>No products match.</Empty>
+                <Empty>Aucun produit ne correspond.</Empty>
               ) : (
                 <div className="product-grid">
                   {productGroups.map((group) => {
@@ -1162,7 +1170,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                         className={`product-tile ${hasVariants ? "has-variants" : ""} ${addingProductId === product.id ? "is-busy" : ""}`}
                         onClick={() => (hasVariants ? setVariantFamily(group) : handleQuickAdd(product))}
                         disabled={scanning}
-                        title={hasVariants ? `Choose a ${group.family} variant` : `${product.name} · ${product.sku}`}
+                        title={hasVariants ? `Choisir une variante de ${group.family}` : `${product.name} · ${product.sku}`}
                       >
                         <div className="product-image-frame">
                           <div className="product-art" aria-hidden="true">{productGlyph(product)}</div>
@@ -1178,12 +1186,12 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                         {!hasVariants && (
                           <div className="product-tile-meta">
                             <span className="product-tile-sku">{product.sku}</span>
-                            <Chip>{product.unitType === "WEIGHT" ? "kg" : "each"}</Chip>
-                            {product.vatRate != null && <Chip>VAT {product.vatRate}%</Chip>}
+                            <Chip>{product.unitType === "WEIGHT" ? "kg" : "unité"}</Chip>
+                            {product.vatRate != null && <Chip>TVA {product.vatRate}%</Chip>}
                           </div>
                         )}
                         <div className="product-tile-footer">
-                          <strong>{hasVariants ? "Choose variant" : formatMoney(priceByProductId.get(product.id) || 0)}</strong>
+                          <strong>{hasVariants ? "Choisir une variante" : formatMoney(priceByProductId.get(product.id) || 0)}</strong>
                           {hasVariants ? <ChevronRight size={15} /> : <Plus size={14} />}
                         </div>
                       </button>
@@ -1196,7 +1204,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
 
           {/* Basket */}
           <Panel
-            title={transactionId ? `Basket · ${lines.length} item${lines.length === 1 ? "" : "s"}` : "Basket"}
+            title={transactionId ? `Panier · ${lines.length} article${lines.length === 1 ? "" : "s"}` : "Panier"}
             icon={<ShoppingCart size={16} />}
             className="pos-basket-panel"
           >
@@ -1205,19 +1213,19 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                 <ShoppingCart size={26} />
                 <div>
                   {sessionOpen
-                    ? "Start a sale to begin scanning items."
-                    : "Open the drawer and start a sale to begin scanning items."}
+                    ? "Démarrez une vente pour commencer à scanner les articles."
+                    : "Ouvrez le tiroir et démarrez une vente pour commencer à scanner les articles."}
                 </div>
               </div>
             )}
             {transactionId && lines.length === 0 && !completed && (
               <div className="empty-sale-state">
                 <ScanLine size={26} />
-                <div>No items yet. Scan a barcode or click a product to add it.</div>
+                <div>Aucun article. Scannez un code-barres ou cliquez sur un produit pour l’ajouter.</div>
               </div>
             )}
             {completed && lines.length === 0 && (
-              <Empty>No items on this sale.</Empty>
+              <Empty>Aucun article dans cette vente.</Empty>
             )}
             {lines.length > 0 && (
               <div className="basket-list">
@@ -1232,9 +1240,9 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                         <div className="basket-line-name">{product?.name || l.productName}</div>
                         <div className="basket-line-sub">
                           <span className="basket-line-sku">{product?.sku || ""}</span>
-                          <span className="basket-line-unitprice">{formatMoney(unitPrice)} / {isWeight ? "kg" : "unit"}</span>
+                          <span className="basket-line-unitprice">{formatMoney(unitPrice)} / {isWeight ? "kg" : "unité"}</span>
                           {product?.vatRate != null && (
-                            <span className="basket-line-vat">· VAT {product.vatRate}%</span>
+                            <span className="basket-line-vat">· TVA {product.vatRate}%</span>
                           )}
                         </div>
                       </div>
@@ -1246,7 +1254,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                             quantityValue: Math.max(0, Number(l.quantityValue) - (isWeight ? 0.05 : 1)),
                           })}
                           disabled={completed || isPending}
-                          aria-label="Decrease quantity"
+                          aria-label="Diminuer la quantité"
                         >
                           <Minus size={14} />
                         </button>
@@ -1264,7 +1272,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                             quantityValue: Number(l.quantityValue) + (isWeight ? 0.05 : 1),
                           })}
                           disabled={completed || isPending}
-                          aria-label="Increase quantity"
+                          aria-label="Augmenter la quantité"
                         >
                           <Plus size={14} />
                         </button>
@@ -1276,8 +1284,8 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                           className="btn-icon basket-line-remove"
                           onClick={() => handleRemoveLine(l)}
                           disabled={isPending}
-                          aria-label="Remove line"
-                          title="Remove"
+                          aria-label="Supprimer la ligne"
+                          title="Supprimer"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -1286,12 +1294,12 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                   );
                 })}
                 <div className="basket-grand-total">
-                  <span>Total (incl. VAT)</span>
+                  <span>Total (TTC)</span>
                   <strong>{formatMoney(total)}</strong>
                 </div>
                 <div className="basket-vat-summary">
-                  <span>Subtotal {formatMoney(netTotal)}</span>
-                  <span>VAT {formatMoney(vatTotal)}</span>
+                  <span>Sous-total {formatMoney(netTotal)}</span>
+                  <span>TVA {formatMoney(vatTotal)}</span>
                 </div>
               </div>
             )}
@@ -1301,7 +1309,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
 
       {/* Modals */}
       {scannerModalOpen && transactionId && !completed && (
-        <Modal title="Scan barcode" icon={<Barcode size={16} />} onClose={() => setScannerModalOpen(false)}>
+        <Modal title="Scanner un code-barres" icon={<Barcode size={16} />} onClose={() => setScannerModalOpen(false)}>
           <Message ok={scanMsg?.ok} text={scanMsg?.text} />
           <form onSubmit={(event) => { handleBarcodeScan(event); setScannerModalOpen(false); }} className="scanner-form">
             <div className="scanner-input-wrap">
@@ -1311,24 +1319,24 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                 type="text"
                 value={barcodeValue}
                 onChange={(event) => setBarcodeValue(event.target.value)}
-                placeholder="Scan or type barcode"
+                placeholder="Scanner ou saisir un code-barres"
                 autoFocus
                 disabled={scanning}
-                aria-label="Barcode"
+                aria-label="Code-barres"
               />
             </div>
             <button type="submit" className="btn btn-primary" disabled={scanning || !barcodeValue.trim()}>
-              <ScanLine size={14} /> {scanning ? "Adding…" : "Add"}
+              <ScanLine size={14} /> {scanning ? "Ajout…" : "Ajouter"}
             </button>
           </form>
-          {lastScan && <div className="scanner-flash"><CheckCircle2 size={14} /> Added {lastScan.qty} {lastScan.unit === "kg" ? "kg" : "×"} {lastScan.name}</div>}
+          {lastScan && <div className="scanner-flash"><CheckCircle2 size={14} /> Ajouté : {lastScan.qty} {lastScan.unit === "kg" ? "kg" : "×"} {lastScan.name}</div>}
         </Modal>
       )}
 
       {phonePairing && phonePairingOpen && (
-        <Modal title="Pair phone scanner" icon={<Smartphone size={16} />} onClose={hidePhoneScanner}>
+        <Modal title="Associer le scanner mobile" icon={<Smartphone size={16} />} onClose={hidePhoneScanner}>
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 0 }}>
-            Connect the phone to this same Wi‑Fi network and scan this QR code. After the phone is paired, close this window — the scanner will stay active.
+            Connectez le téléphone au même réseau Wi-Fi et scannez ce code QR. Une fois le téléphone associé, fermez cette fenêtre — le scanner restera actif.
           </p>
           <div className="phone-pairing-qr">
             <QRCodeSVG value={phonePairing.scannerUrl} size={220} includeMargin />
@@ -1338,21 +1346,21 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
             <button
               type="button"
               className="btn-icon"
-              title="Copy scanner link"
-              aria-label="Copy scanner link"
+              title="Copier le lien du scanner"
+              aria-label="Copier le lien du scanner"
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(phonePairing.scannerUrl);
-                  setPhonePairingMsg({ ok: true, text: "Scanner link copied." });
+                  setPhonePairingMsg({ ok: true, text: "Lien du scanner copié." });
                 } catch {
-                  setPhonePairingMsg({ ok: false, text: "Could not copy the link; use the QR code instead." });
+                  setPhonePairingMsg({ ok: false, text: "Impossible de copier le lien ; utilisez plutôt le QR code." });
                 }
               }}
             ><Copy size={15} /></button>
           </div>
           <Message ok={phonePairingMsg?.ok} text={phonePairingMsg?.text} />
           <div className="modal-actions">
-            <button type="button" className="btn btn-primary" onClick={hidePhoneScanner}>Done</button>
+            <button type="button" className="btn btn-primary" onClick={hidePhoneScanner}>Terminé</button>
           </div>
         </Modal>
       )}
@@ -1363,7 +1371,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
           icon={<ShoppingBag size={16} />}
           onClose={() => setVariantFamily(null)}
         >
-          <p className="variant-picker-help">Choose the exact product and price to add to this ticket.</p>
+          <p className="variant-picker-help">Choisissez le produit exact et son prix à ajouter à ce ticket.</p>
           <div className="variant-list">
             {variantFamily.products.map((product) => (
               <button
@@ -1382,7 +1390,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                 </div>
                 <span className="variant-option-copy">
                   <strong>{product.name}</strong>
-                  <small>{product.sku} · {product.unitType === "WEIGHT" ? "sold by kg" : "sold by unit"}</small>
+                <small>{product.sku} · {product.unitType === "WEIGHT" ? "vendu au kg" : "vendu à l’unité"}</small>
                 </span>
                 <strong className="variant-option-price">{formatMoney(priceByProductId.get(product.id) || 0)}</strong>
                 <ChevronRight size={16} />
@@ -1393,50 +1401,50 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
       )}
 
       {sessionModal === "open" && (
-        <Modal title="Open cash drawer" icon={<Unlock size={16} />} onClose={() => !openingSession && setSessionModal(null)}>
+        <Modal title="Ouvrir le tiroir-caisse" icon={<Unlock size={16} />} onClose={() => !openingSession && setSessionModal(null)}>
           <Message ok={sessionMsg?.ok} text={sessionMsg?.text} />
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 0 }}>
-            Count the cash already in the drawer and enter the opening float.
+            Comptez les espèces déjà présentes dans le tiroir et saisissez le fonds de caisse initial.
           </p>
           <form onSubmit={handleOpenSession}>
-            <Field label="Till">
+            <Field label="Caisse">
               <select autoFocus value={tillId} onChange={(e) => setTillId(e.target.value)}>
-                <option value="">Select a till…</option>
+                <option value="">Sélectionner une caisse…</option>
                 {tills.filter((t) => t.status !== "OPEN" || t.id === tillId).map((t) => (
                   <option key={t.id} value={t.id}>{t.tillNumber}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Cashier name">
-              <input type="text" value={cashierName} onChange={(e) => setCashierName(e.target.value)} placeholder="e.g. Sami" />
+            <Field label="Nom du caissier">
+              <input type="text" value={cashierName} onChange={(e) => setCashierName(e.target.value)} placeholder="ex. Sami" />
             </Field>
-            <Field label="Opening float (TND)">
+            <Field label="Fonds de caisse initial (TND)">
               <input type="number" min="0" step="0.001" value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} />
             </Field>
             <div className="modal-actions">
-              <button type="button" className="btn" onClick={() => setSessionModal(null)} disabled={openingSession}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={openingSession}>{openingSession ? "Opening…" : "Open drawer"}</button>
+              <button type="button" className="btn" onClick={() => setSessionModal(null)} disabled={openingSession}>Annuler</button>
+              <button type="submit" className="btn btn-primary" disabled={openingSession}>{openingSession ? "Ouverture…" : "Ouvrir le tiroir"}</button>
             </div>
           </form>
         </Modal>
       )}
 
       {sessionModal === "close" && (
-        <Modal title="Close cash drawer" icon={<Lock size={16} />} onClose={() => !closing && setSessionModal(null)}>
+        <Modal title="Fermer le tiroir-caisse" icon={<Lock size={16} />} onClose={() => !closing && setSessionModal(null)}>
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 0 }}>
-            Count the cash in the drawer and enter the final amount to reconcile this session.
+            Comptez les espèces du tiroir et saisissez le montant final pour rapprocher cette session.
           </p>
           <Message ok={closeMsg?.ok} text={closeMsg?.text} />
           <div className="reconcile-card">
-            <div><span>Expected</span><strong>{formatMoney(parseMoney(session?.expectedCash ?? 0))}</strong></div>
-            <div><span>Counted</span><strong>{formatMoney(parseMoney(countedCash))}</strong></div>
+            <div><span>Attendu</span><strong>{formatMoney(parseMoney(session?.expectedCash ?? 0))}</strong></div>
+            <div><span>Compté</span><strong>{formatMoney(parseMoney(countedCash))}</strong></div>
             <div className={parseMoney(countedCash) - parseMoney(session?.expectedCash ?? 0) === 0 ? "" : "warn"}>
-              <span>Difference</span>
+              <span>Écart</span>
               <strong>{formatMoney(parseMoney(countedCash) - parseMoney(session?.expectedCash ?? 0))}</strong>
             </div>
           </div>
           <form onSubmit={handleCloseSession}>
-            <Field label="Counted cash at close (TND)">
+            <Field label="Espèces comptées à la fermeture (TND)">
               <input
                 autoFocus
                 type="number"
@@ -1447,8 +1455,8 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
               />
             </Field>
             <div className="modal-actions">
-              <button type="button" className="btn" onClick={() => setSessionModal(null)} disabled={closing}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={closing}>{closing ? "Closing…" : "Close drawer"}</button>
+              <button type="button" className="btn" onClick={() => setSessionModal(null)} disabled={closing}>Annuler</button>
+              <button type="submit" className="btn btn-primary" disabled={closing}>{closing ? "Fermeture…" : "Fermer le tiroir"}</button>
             </div>
           </form>
         </Modal>
@@ -1767,7 +1775,7 @@ function PosAlertStack({ alerts, onDismiss }) {
         <div key={alert.id} className="pos-alert">
           <AlertTriangle size={17} />
           <span>{alert.text}</span>
-          <button type="button" className="pos-alert-close" onClick={() => onDismiss(alert.id)} aria-label="Dismiss alert">
+          <button type="button" className="pos-alert-close" onClick={() => onDismiss(alert.id)} aria-label="Fermer l’alerte">
             <X size={15} />
           </button>
         </div>
@@ -1790,19 +1798,19 @@ function TicketsTab({ products, onResumeTicket }) {
       setTickets(Array.isArray(data) ? data : []);
       setError("");
     } catch (err) {
-      setError(err.message || "Could not load tickets.");
+      setError(err.message || "Impossible de charger les tickets.");
     } finally {
       setLoading(false);
     }
   }, [request]);
 
   const handleDeleteTicket = useCallback(async (ticketId) => {
-    if (!window.confirm("Delete this in-progress ticket? This cannot be undone.")) return;
+    if (!window.confirm("Supprimer ce ticket en cours ? Cette action est irréversible.")) return;
     try {
       await request(`/api/pos/transactions/${ticketId}`, { method: "DELETE" });
       setTickets((prev) => prev.filter((ticket) => ticket.id !== ticketId));
     } catch (err) {
-      setError(err.message || "Could not delete the ticket.");
+      setError(err.message || "Impossible de supprimer le ticket.");
     }
   }, [request]);
 
@@ -1822,21 +1830,21 @@ function TicketsTab({ products, onResumeTicket }) {
 
   return (
     <Panel
-      title="Ticket history"
+      title="Historique des tickets"
       icon={<History size={16} />}
       right={
         <button className="btn" onClick={loadTickets} disabled={loading} style={{ padding: "5px 10px" }}>
-          <RefreshCw size={13} /> Refresh
+          <RefreshCw size={13} /> Actualiser
         </button>
       }
     >
       <Message ok={false} text={error} />
       <div className="ticket-filters">
         {[
-          { key: "ALL", label: "All" },
-          { key: "IN_PROGRESS", label: "In progress" },
-          { key: "COMPLETED", label: "Completed" },
-          { key: "VOIDED", label: "Voided" },
+          { key: "ALL", label: "Tous" },
+          { key: "IN_PROGRESS", label: "En cours" },
+          { key: "COMPLETED", label: "Terminés" },
+          { key: "VOIDED", label: "Annulés" },
         ].map((f) => (
           <button
             key={f.key}
@@ -1848,35 +1856,35 @@ function TicketsTab({ products, onResumeTicket }) {
           </button>
         ))}
       </div>
-      {loading && <Empty>Loading tickets…</Empty>}
-      {!loading && !error && filtered.length === 0 && <Empty>No tickets.</Empty>}
+      {loading && <Empty>Chargement des tickets…</Empty>}
+      {!loading && !error && filtered.length === 0 && <Empty>Aucun ticket.</Empty>}
       {!loading && filtered.map((ticket) => (
         <div key={ticket.id} className={`ticket-row status-${ticket.status.toLowerCase()}`}>
           <div className="ticket-row-main">
             <div className="ticket-row-head">
               <span className="ticket-row-id">Ticket {ticket.id.slice(0, 8)}</span>
-              <Chip warn={ticket.status !== "COMPLETED"}>{ticket.status.replace("_", " ")}</Chip>
-              {ticket.paymentMethod && <Chip>{ticket.paymentMethod}</Chip>}
+              <Chip warn={ticket.status !== "COMPLETED"}>{ticketStatusLabel(ticket.status)}</Chip>
+              {ticket.paymentMethod && <Chip>{paymentMethodLabel(ticket.paymentMethod)}</Chip>}
             </div>
             <div className="ticket-row-meta">
-              {formatDate(ticket.completedAt || ticket.startedAt)} · {ticket.lines.length} item(s)
+              {formatDate(ticket.completedAt || ticket.startedAt)} · {ticket.lines.length} article(s)
             </div>
           </div>
           <div className="ticket-row-total">{ticket.total}</div>
           <div className="ticket-row-actions">
-            <button className="btn-icon" onClick={() => printReceipt(ticket, products)} title="Print receipt" aria-label="Print">
+            <button className="btn-icon" onClick={() => printReceipt(ticket, products)} title="Imprimer le reçu" aria-label="Imprimer">
               <Printer size={14} />
             </button>
             {ticket.status === "IN_PROGRESS" && onResumeTicket && (
               <>
                 <button className="btn btn-primary" onClick={() => onResumeTicket(ticket.id)}>
-                  Resume
+                  Reprendre
                 </button>
                 <button
                   className="btn-icon danger"
                   onClick={() => handleDeleteTicket(ticket.id)}
-                  title="Delete ticket"
-                  aria-label="Delete"
+                  title="Supprimer le ticket"
+                  aria-label="Supprimer"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -1922,7 +1930,7 @@ function TicketsTab({ products, onResumeTicket }) {
 }
 
 function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "Not completed";
+  return value ? new Date(value).toLocaleString("fr-FR") : "Non terminé";
 }
 
 function parseQuantityValue(value) {
@@ -1946,7 +1954,7 @@ function printReceipt(ticket, products = []) {
     const unitPrice = quantity > 0 ? lineTotal / quantity : 0;
     const quantityUnit = (typeof line.quantity === "string" && line.quantity.includes("kg")) || product?.unitType === "WEIGHT" ? "kg" : "unit";
     const productName = escapeHtml(
-      line.productName || product?.name || (typeof productId === "string" ? productId.slice(0, 8) : "Product")
+      line.productName || product?.name || (typeof productId === "string" ? productId.slice(0, 8) : "Produit")
     );
 
     return `<tr>
@@ -1964,7 +1972,7 @@ function printReceipt(ticket, products = []) {
   const vatTotal = parseMoney(ticket.vatTotal);
   const netTotal = ticket.netTotal == null ? grossTotal - vatTotal : parseMoney(ticket.netTotal);
 
-  receipt.document.write(`<!doctype html><html><head><title>Receipt ${ticketIdShort}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0 0 4px}p{text-align:center;font-size:11px;margin:4px 0 16px}table{width:100%;border-collapse:collapse;font-size:11px}th{font-size:10px;text-align:left;padding:4px 0;border-bottom:1px solid #111}td{padding:5px 0;border-bottom:1px dashed #bbb;vertical-align:top}.amount{text-align:right}.summary{width:100%;font-size:11px;margin-top:10px}.summary td{border:0;padding:3px 0}.summary .grand td{font-weight:bold;font-size:14px;border-top:2px solid #111;padding-top:8px}.footer{text-align:center;margin-top:22px;font-size:11px}</style></head><body><h1>SUPERMARKET</h1><p>Ticket ${ticketIdFull}<br>${formatDate(ticket.completedAt || ticket.startedAt)}<br>Payment: ${paymentMethod}</p><table><thead><tr><th>Qty</th><th>Item</th><th class="amount">Unit</th><th class="amount">Total</th></tr></thead><tbody>${lines}</tbody></table><table class="summary"><tr><td>Subtotal (excl. VAT)</td><td class="amount">${netTotal.toFixed(3)} TND</td></tr><tr><td>VAT</td><td class="amount">${vatTotal.toFixed(3)} TND</td></tr><tr class="grand"><td>TOTAL (incl. VAT)</td><td class="amount">${grossTotal.toFixed(3)} TND</td></tr></table><p class="footer">Thank you for your visit</p></body></html>`);
+  receipt.document.write(`<!doctype html><html lang="fr"><head><title>Reçu ${ticketIdShort}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0 0 4px}p{text-align:center;font-size:11px;margin:4px 0 16px}table{width:100%;border-collapse:collapse;font-size:11px}th{font-size:10px;text-align:left;padding:4px 0;border-bottom:1px solid #111}td{padding:5px 0;border-bottom:1px dashed #bbb;vertical-align:top}.amount{text-align:right}.summary{width:100%;font-size:11px;margin-top:10px}.summary td{border:0;padding:3px 0}.summary .grand td{font-weight:bold;font-size:14px;border-top:2px solid #111;padding-top:8px}.footer{text-align:center;margin-top:22px;font-size:11px}</style></head><body><h1>SUPERMARCHÉ</h1><p>Ticket ${ticketIdFull}<br>${formatDate(ticket.completedAt || ticket.startedAt)}<br>Paiement : ${paymentMethodLabel(paymentMethod)}</p><table><thead><tr><th>Qté</th><th>Article</th><th class="amount">Unité</th><th class="amount">Total</th></tr></thead><tbody>${lines}</tbody></table><table class="summary"><tr><td>Sous-total (hors TVA)</td><td class="amount">${netTotal.toFixed(3)} TND</td></tr><tr><td>TVA</td><td class="amount">${vatTotal.toFixed(3)} TND</td></tr><tr class="grand"><td>TOTAL (TTC)</td><td class="amount">${grossTotal.toFixed(3)} TND</td></tr></table><p class="footer">Merci de votre visite</p></body></html>`);
   receipt.document.close();
   receipt.focus();
   receipt.onload = () => receipt.print();

@@ -13,16 +13,16 @@ import PhoneScannerPage from "./modules/pos/PhoneScannerPage.jsx";
 import VisualRefreshStyles from "./design/VisualRefreshStyles.jsx";
 
 const MODULES = [
-  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: LayoutGrid, status: "active", roles: [], group: "Run the store" },
-  { key: "pos", path: "/pos", label: "Point of sale", icon: ShoppingCart, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"], group: "Run the store" },
-  { key: "inventory", path: "/inventory", label: "Inventory", icon: Package, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stock & supply" },
-  { key: "pricing", path: "/pricing", label: "Pricing", icon: Tag, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stock & supply" },
-  { key: "procurement", path: "/procurement", label: "Procurement", icon: Truck, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stock & supply" },
-  { key: "finance", path: "/finance", label: "Finance", icon: Wallet, status: "active", roles: ["ADMIN", "MANAGER", "ACCOUNTANT"], group: "Keep the books" },
-  { key: "users", path: "/users", label: "Users", icon: Shield, status: "active", roles: ["ADMIN"], group: "Workspace" },
+  { key: "dashboard", path: "/dashboard", label: "Tableau de bord", icon: LayoutGrid, status: "active", roles: [], group: "Gérer le magasin" },
+  { key: "pos", path: "/pos", label: "Caisse", icon: ShoppingCart, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"], group: "Gérer le magasin" },
+  { key: "inventory", path: "/inventory", label: "Stock", icon: Package, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stocks et approvisionnement" },
+  { key: "pricing", path: "/pricing", label: "Tarification", icon: Tag, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stocks et approvisionnement" },
+  { key: "procurement", path: "/procurement", label: "Approvisionnement", icon: Truck, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stocks et approvisionnement" },
+  { key: "finance", path: "/finance", label: "Finance", icon: Wallet, status: "active", roles: ["ADMIN", "MANAGER", "ACCOUNTANT"], group: "Comptabilité" },
+  { key: "users", path: "/users", label: "Utilisateurs", icon: Shield, status: "active", roles: ["ADMIN"], group: "Espace de travail" },
 ];
 
-const NAV_GROUPS = ["Run the store", "Stock & supply", "Keep the books", "Workspace"];
+const NAV_GROUPS = ["Gérer le magasin", "Stocks et approvisionnement", "Comptabilité", "Espace de travail"];
 const rolesFor = (key) => MODULES.find((module) => module.key === key)?.roles || [];
 
 function Sidebar() {
@@ -35,7 +35,7 @@ function Sidebar() {
           <span className="brand-symbol" aria-hidden="true">C</span>
           <span className="brand-mark">Counter</span>
         </div>
-        <span className="brand-sub">Store operations</span>
+        <span className="brand-sub">Opérations du magasin</span>
       </div>
       <nav className="nav">
         {NAV_GROUPS.map((group) => {
@@ -47,7 +47,7 @@ function Sidebar() {
               {groupModules.map((m) => {
                 const Icon = m.icon;
                 const active = location.pathname.startsWith(m.path);
-                const content = <><Icon size={17} /><span>{m.label}</span>{m.status === "soon" && <span className="badge">Next</span>}</>;
+                const content = <><Icon size={17} /><span>{m.label}</span>{m.status === "soon" && <span className="badge">Bientôt</span>}</>;
                 return m.status === "active" ? (
                   <Link key={m.key} to={m.path} className={`nav-item ${active ? "active" : ""}`}>{content}</Link>
                 ) : <div key={m.key} className="nav-item soon">{content}</div>;
@@ -64,7 +64,7 @@ function Sidebar() {
             <small>{auth?.user?.roles?.join(" · ")}</small>
           </span>
         </div>
-        <button type="button" className="btn sidebar-signout" onClick={logout}><LogOut size={15} /> Sign out</button>
+        <button type="button" className="btn sidebar-signout" onClick={logout}><LogOut size={15} /> Se déconnecter</button>
       </div>
     </aside>
   );

@@ -17,7 +17,7 @@ export default function LoginPage() {
         if (active) setSetupRequired(Boolean(status?.setupRequired));
       })
       .catch((error) => {
-        if (active) setMessage(error.message || "Could not reach the API.");
+        if (active) setMessage(error.message || "Impossible de joindre l’API.");
       })
       .finally(() => {
         if (active) setCheckingSetup(false);
@@ -53,36 +53,36 @@ export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-brand"><span className="auth-brand-lockup"><span className="auth-brand-symbol">C</span><span className="brand-mark">Counter</span></span><span>Store operations</span></div>
+        <div className="auth-brand"><span className="auth-brand-lockup"><span className="auth-brand-symbol">C</span><span className="brand-mark">Counter</span></span><span>Opérations du magasin</span></div>
         <div className="auth-heading">
           {setupRequired ? <UserPlus size={21} /> : <LockKeyhole size={21} />}
           <div>
-            <h1>{checkingSetup ? "Connecting" : setupRequired ? "Create administrator" : "Sign in"}</h1>
-            <p>{checkingSetup ? "Checking whether the system needs its first user." : setupRequired ? "Create the first account to secure the system." : "Use your account to continue."}</p>
+            <h1>{checkingSetup ? "Connexion" : setupRequired ? "Créer l’administrateur" : "Se connecter"}</h1>
+            <p>{checkingSetup ? "Vérification de la nécessité de créer le premier utilisateur." : setupRequired ? "Créez le premier compte pour sécuriser le système." : "Utilisez votre compte pour continuer."}</p>
           </div>
         </div>
         {message && <div className="auth-error" role="alert">{message}</div>}
         <form onSubmit={submit}>
           <label className="auth-field">
-            <span>Username</span>
+            <span>Nom d’utilisateur</span>
             <input autoComplete="username" value={form.username} onChange={(event) => update("username", event.target.value)} required disabled={checkingSetup || submitting} />
           </label>
           {setupRequired && (
             <label className="auth-field">
-              <span>Display name</span>
+              <span>Nom affiché</span>
               <input value={form.displayName} onChange={(event) => update("displayName", event.target.value)} required disabled={checkingSetup || submitting} />
             </label>
           )}
           <label className="auth-field">
-            <span>Password</span>
+            <span>Mot de passe</span>
             <input type="password" autoComplete={setupRequired ? "new-password" : "current-password"} value={form.password} onChange={(event) => update("password", event.target.value)} required minLength={8} disabled={checkingSetup || submitting} />
           </label>
           <button className="btn btn-primary auth-submit" type="submit" disabled={checkingSetup || submitting}>
             {setupRequired ? <UserPlus size={16} /> : <LogIn size={16} />}
-            {submitting ? "Please wait..." : setupRequired ? "Create administrator" : "Sign in"}
+            {submitting ? "Veuillez patienter…" : setupRequired ? "Créer l’administrateur" : "Se connecter"}
           </button>
         </form>
-        {setupRequired && <p className="auth-note">The first account automatically receives the ADMIN role. Additional users can be created from Users after signing in.</p>}
+        {setupRequired && <p className="auth-note">Le premier compte reçoit automatiquement le rôle ADMIN. Les utilisateurs supplémentaires peuvent être créés depuis Utilisateurs après la connexion.</p>}
       </section>
       <style>{`
         .auth-page { min-height: 100vh; display: grid; place-items: center; padding: 28px 18px; background: radial-gradient(circle at 12% 10%, #FFF9EC 0, transparent 30%), var(--paper); color: var(--ink); }

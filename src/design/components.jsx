@@ -139,7 +139,7 @@ export function Modal({ title, icon, onClose, children }) {
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={modalRef}>
         <div className="modal-header">
           <h2 id="modal-title" className="panel-title">{icon} {title}</h2>
-          <button type="button" className="btn-icon" onClick={onClose} aria-label="Close dialog"><X size={17} /></button>
+          <button type="button" className="btn-icon" onClick={onClose} aria-label="Fermer la boîte de dialogue"><X size={17} /></button>
         </div>
         {children}
       </div>
