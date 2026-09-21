@@ -46,18 +46,18 @@ export function ApiProvider({ children }) {
         const res = await fetch(`${apiBase}${path}`, {
           method,
           headers: {
-            ...(body ? { "Content-Type": "application/json" } : {}),
+            ...(body && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
             ...authorization,
             ...(headers || {}),
           },
-          body: body ? JSON.stringify(body) : undefined,
+          body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
         });
         const text = await res.text();
         if (!res.ok) {
           // Every error response from this API shares the shape:
           // { timestamp, status, error, message }. message is sometimes in French.
           console.error(`${method} ${path} -> ${res.status}`, text);
-          let detail = text || "no response body — check the server console for the stack trace";
+          let detail = text || "Aucune réponse du serveur — consultez la console du serveur pour la trace d’erreur.";
           try {
             const parsed = JSON.parse(text);
             if (parsed?.message) detail = parsed.message;

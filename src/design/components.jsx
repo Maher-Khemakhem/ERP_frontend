@@ -3,30 +3,30 @@ import { useEffect, useRef } from "react";
 
 /** A "shelf label" card - the signature visual element reused across all modules
  *  (product cards in Inventory, price tags in Pricing, alert cards in Procurement, etc). */
-export function ShelfTag({ children, style = {} }) {
+export function ShelfTag({ children, style = {}, className = "" }) {
   return (
-    <div className="tag-card" style={style}>
+    <div className={`tag-card ${className}`.trim()} style={style}>
       {children}
     </div>
   );
 }
 
-export function Field({ label, children }) {
+export function Field({ label, children, className = "" }) {
   return (
-    <label className="field">
+    <label className={`field ${className}`.trim()}>
       <span className="field-label">{label}</span>
       {children}
     </label>
   );
 }
 
-export function Chip({ children, warn = false }) {
-  return <span className={`chip ${warn ? "warn" : ""}`}>{children}</span>;
+export function Chip({ children, warn = false, tone = "", className = "" }) {
+  return <span className={`chip ${warn ? "warn" : ""} ${tone ? `chip-${tone}` : ""} ${className}`.trim()}>{children}</span>;
 }
 
-export function Panel({ title, icon, right, children }) {
+export function Panel({ title, icon, right, className = "", children, tone = "" }) {
   return (
-    <section className="panel">
+    <section className={`panel ${tone ? `panel-${tone}` : ""} ${className}`.trim()}>
       <h2 className="panel-title" style={right ? { justifyContent: "space-between" } : undefined}>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {icon} {title}
@@ -49,8 +49,8 @@ export function Message({ ok, text }) {
   );
 }
 
-export function Empty({ children }) {
-  return <div className="empty">{children}</div>;
+export function Empty({ children, className = "" }) {
+  return <div className={`empty ${className}`.trim()}>{children}</div>;
 }
 
 export function Tabs({ tabs, active, onChange }) {
@@ -88,6 +88,8 @@ export function Tabs({ tabs, active, onChange }) {
 export function Modal({ title, icon, onClose, children }) {
   const modalRef = useRef(null);
   const previouslyFocused = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Lock background scroll, trap focus inside the dialog, and restore both
   // the scroll position and the triggering element's focus on close.
@@ -107,7 +109,7 @@ export function Modal({ title, icon, onClose, children }) {
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -130,14 +132,14 @@ export function Modal({ title, icon, onClose, children }) {
       document.body.style.overflow = originalOverflow;
       previouslyFocused.current?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={modalRef}>
         <div className="modal-header">
           <h2 id="modal-title" className="panel-title">{icon} {title}</h2>
-          <button type="button" className="btn-icon" onClick={onClose} aria-label="Close dialog"><X size={17} /></button>
+          <button type="button" className="btn-icon" onClick={onClose} aria-label="Fermer la boîte de dialogue"><X size={17} /></button>
         </div>
         {children}
       </div>

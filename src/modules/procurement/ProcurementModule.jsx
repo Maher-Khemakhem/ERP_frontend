@@ -10,10 +10,10 @@ function productLabel(products, productId) {
 
 function statusLabel(status) {
   return {
-    DRAFT: "Draft",
-    PLACED: "Placed",
-    RECEIVED: "Received",
-    CANCELLED: "Cancelled",
+    DRAFT: "Brouillon",
+    PLACED: "Passée",
+    RECEIVED: "Réceptionnée",
+    CANCELLED: "Annulée",
   }[status] || status;
 }
 
@@ -41,16 +41,16 @@ export default function ProcurementModule() {
 
   return (
     <div>
-      <h1 className="page-title">Procurement</h1>
-      <p className="page-sub">Suppliers, purchases and low-stock follow-up.</p>
+      <h1 className="page-title">Approvisionnement</h1>
+      <p className="page-sub">Fournisseurs, achats et suivi du stock faible.</p>
 
       <Tabs
         active={tab}
         onChange={setTab}
         tabs={[
-          { key: "suppliers", label: "Suppliers" },
-          { key: "orders", label: "Orders" },
-          { key: "alerts", label: "Alerts" },
+          { key: "suppliers", label: "Fournisseurs" },
+          { key: "orders", label: "Commandes" },
+          { key: "alerts", label: "Alertes" },
         ]}
       />
 
@@ -77,7 +77,7 @@ function SuppliersTab() {
       const data = await request("/api/procurement/suppliers");
       setSuppliers(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Could not reach the supplier service.");
+      setError(err.message || "Impossible de joindre le service fournisseurs.");
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ function SuppliersTab() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
-      setMsg({ ok: false, text: "Supplier name is required." });
+      setMsg({ ok: false, text: "Le nom du fournisseur est obligatoire." });
       return;
     }
     setSaving(true);
@@ -105,11 +105,11 @@ function SuppliersTab() {
           address: form.address.trim() || null,
         },
       });
-      setMsg({ ok: true, text: `Supplier "${form.name.trim()}" added.` });
+      setMsg({ ok: true, text: `Fournisseur « ${form.name.trim()} » ajouté.` });
       setForm({ name: "", contactEmail: "", phone: "", address: "" });
       fetchSuppliers();
     } catch (err) {
-      setMsg({ ok: false, text: err.message || "Could not create supplier." });
+      setMsg({ ok: false, text: err.message || "Impossible de créer le fournisseur." });
     } finally {
       setSaving(false);
     }
@@ -117,46 +117,46 @@ function SuppliersTab() {
 
   return (
     <div className="grid">
-      <Panel title="Add supplier" icon={<Plus size={16} />}>
+      <Panel title="Ajouter un fournisseur" icon={<Plus size={16} />}>
         <Message ok={msg?.ok} text={msg?.text} />
         <form onSubmit={handleSubmit}>
-          <Field label="Supplier name">
+          <Field label="Nom du fournisseur">
             <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Fresh Valley" />
           </Field>
-          <Field label="Phone">
+          <Field label="Téléphone">
             <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+216 71 000 000" />
           </Field>
-          <Field label="Email">
+          <Field label="E-mail">
             <input type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} placeholder="supplier@example.com" />
           </Field>
-          <Field label="Address">
-            <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Factory road, Tunis" />
+          <Field label="Adresse">
+            <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rue de l’usine, Tunis" />
           </Field>
           <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: "100%", justifyContent: "center" }}>
-            {saving ? "Saving…" : "Save supplier"}
+            {saving ? "Enregistrement…" : "Enregistrer le fournisseur"}
           </button>
         </form>
       </Panel>
 
       <Panel
-        title="Suppliers"
+        title="Fournisseurs"
         icon={<Truck size={16} />}
         right={
           <button className="btn" onClick={fetchSuppliers} disabled={loading} style={{ padding: "5px 10px" }}>
-            <RefreshCw size={13} /> Refresh
+            <RefreshCw size={13} /> Actualiser
           </button>
         }
       >
         <Message ok={false} text={error} />
-        {!error && suppliers.length === 0 && !loading && <Empty>No suppliers registered yet.</Empty>}
+        {!error && suppliers.length === 0 && !loading && <Empty>Aucun fournisseur enregistré.</Empty>}
         {suppliers.map((supplier) => (
           <ShelfTag key={supplier.id}>
             <div className="tag-row">
               <div>
                 <div className="tag-name">{supplier.name}</div>
-                <div className="tag-sku">{supplier.phone || "No phone"}</div>
+                <div className="tag-sku">{supplier.phone || "Aucun téléphone"}</div>
               </div>
-              <Chip>{supplier.contactEmail || "No email"}</Chip>
+              <Chip>{supplier.contactEmail || "Aucun e-mail"}</Chip>
             </div>
           </ShelfTag>
         ))}
@@ -183,7 +183,7 @@ function OrdersTab({ products, onProductsRefresh }) {
   const spendBreakdown = useMemo(() => {
     const totals = new Map();
     orders.forEach((order) => {
-      const supplierKey = order.supplierId || "Unknown supplier";
+      const supplierKey = order.supplierId || "Fournisseur inconnu";
       const supplierName = order.supplierName || supplierKey;
       const value = Number(parseFloat(String(order.totalCost ?? "0").replace(/[^0-9.-]/g, "")) || 0);
       totals.set(supplierKey, {
@@ -243,7 +243,7 @@ function OrdersTab({ products, onProductsRefresh }) {
       const data = await request("/api/procurement/orders");
       setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Could not reach the purchase order service.");
+      setError(err.message || "Impossible de joindre le service des commandes d’achat.");
     } finally {
       setLoading(false);
     }
@@ -258,7 +258,7 @@ function OrdersTab({ products, onProductsRefresh }) {
   async function handleCreateOrder(e) {
     e.preventDefault();
     if (!form.supplierId || !form.productId || !form.quantity || !form.unitCost) {
-      setMsg({ ok: false, text: "Supplier, product, quantity and unit cost are required." });
+      setMsg({ ok: false, text: "Le fournisseur, le produit, la quantité et le coût unitaire sont obligatoires." });
       return;
     }
     setCreating(true);
@@ -276,24 +276,24 @@ function OrdersTab({ products, onProductsRefresh }) {
           }],
         },
       });
-      setMsg({ ok: true, text: "Purchase order created." });
+      setMsg({ ok: true, text: "Commande d’achat créée." });
       setForm({ supplierId: "", productId: "", quantity: "10", unitCost: "" });
       fetchOrders();
     } catch (err) {
-      setMsg({ ok: false, text: err.message || "Could not create the order." });
+      setMsg({ ok: false, text: err.message || "Impossible de créer la commande." });
     } finally {
       setCreating(false);
     }
   }
 
   async function handleAction(orderId, action) {
-    if (action === "cancel" && !window.confirm("Cancel this purchase order?")) return;
+    if (action === "cancel" && !window.confirm("Annuler cette commande d’achat ?")) return;
     setActionKey(`${orderId}:${action}`);
     try {
       await request(`/api/procurement/orders/${orderId}/${action}`, { method: "POST" });
       fetchOrders();
     } catch (err) {
-      setError(err.message || `Could not ${action} the order.`);
+      setError(err.message || `Impossible d’exécuter l’action « ${action} » sur la commande.`);
     } finally {
       setActionKey(null);
     }
@@ -307,16 +307,16 @@ function OrdersTab({ products, onProductsRefresh }) {
       const draft = receiptForm[line.id];
       const quantity = Number(draft?.quantityValue);
       if (!Number.isFinite(quantity) || quantity <= 0) {
-        setReceiveMsg({ ok: false, text: "Every receipt quantity must be greater than zero." });
+        setReceiveMsg({ ok: false, text: "Chaque quantité réceptionnée doit être supérieure à zéro." });
         return;
       }
       if (draft.unitType === "EACH" && !Number.isInteger(quantity)) {
-        setReceiveMsg({ ok: false, text: "Each quantities must be whole numbers." });
+        setReceiveMsg({ ok: false, text: "Les quantités à l’unité doivent être des nombres entiers." });
         return;
       }
       const product = products.find((candidate) => candidate.id === line.productId);
       if (product?.perishable && !draft.expiryDate) {
-        setReceiveMsg({ ok: false, text: `${product.name} requires an expiry date.` });
+        setReceiveMsg({ ok: false, text: `${product.name} nécessite une date d’expiration.` });
         return;
       }
     }
@@ -341,13 +341,13 @@ function OrdersTab({ products, onProductsRefresh }) {
           }),
         },
       });
-      setMsg({ ok: true, text: "Goods received and added to inventory." });
+      setMsg({ ok: true, text: "Marchandises réceptionnées et ajoutées au stock." });
       setReceivingOrder(null);
       setReceiptForm({});
       fetchOrders();
       onProductsRefresh();
     } catch (err) {
-      setReceiveMsg({ ok: false, text: err.message || "Could not receive the order." });
+      setReceiveMsg({ ok: false, text: err.message || "Impossible de réceptionner la commande." });
     } finally {
       setReceiving(false);
     }
@@ -355,45 +355,45 @@ function OrdersTab({ products, onProductsRefresh }) {
 
   return (
     <div>
-      <div className="procurement-summary" aria-label="Purchase order summary">
+      <div className="procurement-summary" aria-label="Résumé des commandes d’achat">
         <div className="procurement-summary-card">
-          <div className="procurement-summary-label">Open orders</div>
+          <div className="procurement-summary-label">Commandes ouvertes</div>
           <div className="procurement-summary-value">{orderSummary.open}</div>
-          <div className="procurement-summary-help">Draft or waiting for delivery</div>
+          <div className="procurement-summary-help">Brouillon ou en attente de livraison</div>
         </div>
         <div className="procurement-summary-card">
-          <div className="procurement-summary-label">To receive</div>
+          <div className="procurement-summary-label">À réceptionner</div>
           <div className="procurement-summary-value">{orderSummary.placed}</div>
-          <div className="procurement-summary-help">Placed with a supplier</div>
+          <div className="procurement-summary-help">Passées auprès d’un fournisseur</div>
         </div>
         <div className="procurement-summary-card">
-          <div className="procurement-summary-label">Received</div>
+          <div className="procurement-summary-label">Réceptionnées</div>
           <div className="procurement-summary-value">{orderSummary.received}</div>
-          <div className="procurement-summary-help">Added to inventory</div>
+          <div className="procurement-summary-help">Ajoutées au stock</div>
         </div>
         <div className="procurement-summary-card">
-          <div className="procurement-summary-label">Order value</div>
+          <div className="procurement-summary-label">Valeur des commandes</div>
           <div className="procurement-summary-value">{moneyLabel(totalSpend)}</div>
-          <div className="procurement-summary-help">Across all purchase orders</div>
+          <div className="procurement-summary-help">Toutes les commandes d’achat</div>
         </div>
       </div>
 
       <div className="grid">
-      <Panel title="Purchase overview" icon={<Boxes size={16} />}>
+      <Panel title="Vue d’ensemble des achats" icon={<Boxes size={16} />}>
         <div className="tag-meta" style={{ marginBottom: 12 }}>
-          <Chip>{`Total spend: ${totalSpend.toFixed(3)} TND`}</Chip>
-          <Chip>{`${orders.length} total order(s)`}</Chip>
+          <Chip>{`Dépenses totales : ${totalSpend.toFixed(3)} TND`}</Chip>
+          <Chip>{`${orders.length} commande(s) au total`}</Chip>
           <Chip>{`${orderSummary.cancelled} cancelled`}</Chip>
         </div>
         {spendBreakdown.length === 0 ? (
-          <Empty>No orders yet — spend totals will appear here once purchases are created.</Empty>
+          <Empty>Aucune commande — les totaux apparaîtront ici une fois les achats créés.</Empty>
         ) : (
           spendBreakdown.map((row) => (
             <ShelfTag key={row.supplierId} style={{ marginBottom: 8 }}>
               <div className="tag-row">
                 <div>
                   <div className="tag-name">{row.name}</div>
-                  <div className="tag-sku">{row.orders} purchase order(s)</div>
+                  <div className="tag-sku">{row.orders} commande(s) d’achat</div>
                 </div>
                 <Chip>{row.total.toFixed(3)} TND</Chip>
               </div>
@@ -402,29 +402,29 @@ function OrdersTab({ products, onProductsRefresh }) {
         )}
       </Panel>
 
-      <Panel title="New purchase order" icon={<Plus size={16} />}>
+      <Panel title="Nouvelle commande d’achat" icon={<Plus size={16} />}>
         <Message ok={msg?.ok} text={msg?.text} />
         <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: "-4px 0 16px" }}>
-          Record what you want to buy. Stock changes only after you receive the goods.
+          Indiquez ce que vous souhaitez acheter. Le stock ne change qu’après réception des marchandises.
         </p>
         <form onSubmit={handleCreateOrder}>
-          <Field label="Supplier">
+          <Field label="Fournisseur">
             <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })}>
-              <option value="">Select a supplier…</option>
+              <option value="">Sélectionner un fournisseur…</option>
               {suppliers.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
               ))}
             </select>
           </Field>
-          <Field label="Product">
+          <Field label="Produit">
             <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-              <option value="">Select a product…</option>
+              <option value="">Sélectionner un produit…</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>
               ))}
             </select>
           </Field>
-          <Field label="Quantity">
+          <Field label="Quantité">
             <input
               type="number"
               min="0.001"
@@ -433,33 +433,33 @@ function OrdersTab({ products, onProductsRefresh }) {
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
             />
           </Field>
-          <Field label="Unit cost (TND)">
+          <Field label="Coût unitaire (TND)">
             <input type="number" min="0" step="0.001" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} placeholder="2.300" />
           </Field>
           <button type="submit" className="btn btn-primary" disabled={creating} style={{ width: "100%", justifyContent: "center" }}>
             <Plus size={15} />
-            {creating ? "Creating…" : "Create order"}
+            {creating ? "Création…" : "Créer la commande"}
           </button>
         </form>
       </Panel>
 
       <Panel
-        title="Purchase orders"
+        title="Commandes d’achat"
         icon={<Package size={16} />}
         right={
           <button className="btn" onClick={fetchOrders} disabled={loading} style={{ padding: "5px 10px" }}>
-            <RefreshCw size={13} /> Refresh
+            <RefreshCw size={13} /> Actualiser
           </button>
         }
       >
         <Message ok={false} text={error} />
-        {!error && orders.length === 0 && !loading && <Empty>No purchase orders yet.</Empty>}
+        {!error && orders.length === 0 && !loading && <Empty>Aucune commande d’achat pour le moment.</Empty>}
         {orders.map((order) => (
           <ShelfTag key={order.id}>
             <div className="procurement-order-header">
               <div>
                 <div className="tag-name">{order.supplierName || order.supplierId}</div>
-                <div className="tag-sku">Purchase order · {order.id.slice(0, 8)}</div>
+                <div className="tag-sku">Commande d’achat · {order.id.slice(0, 8)}</div>
               </div>
               <span className={`chip order-status order-status-${String(order.status || "").toLowerCase()}`}>
                 {statusLabel(order.status)}
@@ -469,28 +469,28 @@ function OrdersTab({ products, onProductsRefresh }) {
               {(order.lines || []).slice(0, 3).map((line) => (
                 <div className="procurement-order-line" key={line.id}>
                   <span>{productLabel(products, line.productId)}</span>
-                  <strong>{line.quantity} {line.unitType === "WEIGHT" ? "kg" : "units"}</strong>
+                  <strong>{line.quantity} {line.unitType === "WEIGHT" ? "kg" : "unités"}</strong>
                 </div>
               ))}
-              {(order.lines || []).length > 3 && <span>+ {(order.lines || []).length - 3} more product(s)</span>}
-              {(order.lines || []).length === 0 && <span>No products on this order</span>}
+              {(order.lines || []).length > 3 && <span>+ {(order.lines || []).length - 3} produit(s) supplémentaire(s)</span>}
+              {(order.lines || []).length === 0 && <span>Aucun produit dans cette commande</span>}
             </div>
             <div className="procurement-order-actions">
-              <Chip>{order.lines?.length ? order.lines.length + " line(s)" : "No lines"}</Chip>
+              <Chip>{order.lines?.length ? order.lines.length + " ligne(s)" : "Aucune ligne"}</Chip>
               <Chip>{moneyLabel(order.totalCost)}</Chip>
               {order.status === "DRAFT" && (
                 <button type="button" className="btn btn-primary btn-small" disabled={actionKey} onClick={() => handleAction(order.id, "place")}>
-                  <Send size={13} /> {actionKey === `${order.id}:place` ? "Placing..." : "Place order"}
+                  <Send size={13} /> {actionKey === `${order.id}:place` ? "Passage…" : "Passer la commande"}
                 </button>
               )}
               {order.status === "PLACED" && (
                 <button type="button" className="btn btn-primary btn-small" disabled={actionKey} onClick={() => openReceive(order)}>
-                  <PackageCheck size={13} /> Receive goods
+                  <PackageCheck size={13} /> Réceptionner les marchandises
                 </button>
               )}
               {(order.status === "DRAFT" || order.status === "PLACED") && (
                 <button type="button" className="btn btn-danger btn-small" disabled={actionKey} onClick={() => handleAction(order.id, "cancel")}>
-                  <Ban size={13} /> Cancel
+                  <Ban size={13} /> Annuler
                 </button>
               )}
             </div>
@@ -502,23 +502,23 @@ function OrdersTab({ products, onProductsRefresh }) {
 
       {receivingOrder && (
         <Modal
-          title={`Receive order from ${receivingOrder.supplierName || receivingOrder.supplierId}`}
+          title={`Réceptionner la commande de ${receivingOrder.supplierName || receivingOrder.supplierId}`}
           icon={<Truck size={16} />}
           onClose={() => setReceivingOrder(null)}
         >
           <Message ok={receiveMsg?.ok} text={receiveMsg?.text} />
           <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: -6 }}>
-            Enter the lot and expiry information for each ordered product. Blank lot numbers are generated automatically.
+            Saisissez les informations de lot et d’expiration pour chaque produit commandé. Les numéros de lot vides sont générés automatiquement.
           </p>
           <form onSubmit={handleReceive}>
             {(receivingOrder.lines || []).map((line) => {
               const product = products.find((candidate) => candidate.id === line.productId);
               const draft = receiptForm[line.id] || {};
-              const unitLabel = draft.unitType === "WEIGHT" ? "kg" : "units";
+              const unitLabel = draft.unitType === "WEIGHT" ? "kg" : "unités";
               return (
                 <div key={line.id} style={{ borderTop: "1px solid var(--hairline)", paddingTop: 12, marginTop: 12 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>{product?.name || line.productId}</div>
-                  <Field label={`Quantity (${unitLabel})`}>
+                  <Field label={`Quantité (${unitLabel})`}>
                     <input
                       type="number"
                       min="0.001"
@@ -527,22 +527,22 @@ function OrdersTab({ products, onProductsRefresh }) {
                       onChange={(event) => updateReceiptLine(line.id, "quantityValue", event.target.value)}
                     />
                   </Field>
-                  <Field label="Lot number (optional)">
+                  <Field label="Numéro de lot (facultatif)">
                     <input
                       type="text"
                       value={draft.lotNumber || ""}
                       onChange={(event) => updateReceiptLine(line.id, "lotNumber", event.target.value)}
-                      placeholder="Generated automatically"
+                      placeholder="Généré automatiquement"
                     />
                   </Field>
-                  <Field label={`Expiry date${product?.perishable ? " (required)" : " (optional)"}`}>
+                  <Field label={`Date d’expiration${product?.perishable ? " (obligatoire)" : " (facultatif)"}`}>
                     <input
                       type="date"
                       value={draft.expiryDate || ""}
                       onChange={(event) => updateReceiptLine(line.id, "expiryDate", event.target.value)}
                     />
                   </Field>
-                  <Field label="Supplier reference (optional)">
+                  <Field label="Référence fournisseur (facultatif)">
                     <input
                       type="text"
                       value={draft.supplierReference || ""}
@@ -553,7 +553,7 @@ function OrdersTab({ products, onProductsRefresh }) {
               );
             })}
             <button type="submit" className="btn btn-primary" disabled={receiving} style={{ width: "100%", justifyContent: "center", marginTop: 12 }}>
-              {receiving ? "Receiving…" : "Confirm receipt"}
+              {receiving ? "Réception…" : "Confirmer la réception"}
             </button>
           </form>
         </Modal>
@@ -575,7 +575,7 @@ function AlertsTab({ products }) {
       const data = await request("/api/procurement/alerts");
       setAlerts(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Could not reach the alerts service.");
+      setError(err.message || "Impossible de joindre le service des alertes.");
     } finally {
       setLoading(false);
     }
@@ -590,36 +590,36 @@ function AlertsTab({ products }) {
       await request(`/api/procurement/alerts/${alertId}/acknowledge`, { method: "POST" });
       fetchAlerts();
     } catch (err) {
-      setError(err.message || "Could not acknowledge the alert.");
+      setError(err.message || "Impossible de traiter l’alerte.");
     }
   }
 
   return (
     <div className="grid">
       <Panel
-        title="Low-stock alerts"
+        title="Alertes de stock faible"
         icon={<AlertTriangle size={16} />}
         right={
           <button className="btn" onClick={fetchAlerts} disabled={loading} style={{ padding: "5px 10px" }}>
-            <RefreshCw size={13} /> Refresh
+            <RefreshCw size={13} /> Actualiser
           </button>
         }
       >
         <Message ok={false} text={error} />
-        {!error && alerts.length === 0 && !loading && <Empty>No low-stock alerts right now.</Empty>}
+        {!error && alerts.length === 0 && !loading && <Empty>Aucune alerte de stock faible pour le moment.</Empty>}
         {alerts.map((alert) => (
           <ShelfTag key={alert.id}>
             <div className="tag-row">
               <div>
                 <div className="tag-name">{productLabel(products, alert.productId)}</div>
-                <div className="tag-sku">Created {new Date(alert.createdAt).toLocaleString()}</div>
+              <div className="tag-sku">Créée le {new Date(alert.createdAt).toLocaleString("fr-FR")}</div>
               </div>
-              <Chip warn={!alert.acknowledged}>{alert.acknowledged ? "Handled" : "Open"}</Chip>
+              <Chip warn={!alert.acknowledged}>{alert.acknowledged ? "Traitée" : "Ouverte"}</Chip>
             </div>
             {!alert.acknowledged && (
               <div className="tag-meta">
                 <button type="button" className="btn" onClick={() => acknowledge(alert.id)} style={{ padding: "5px 8px" }}>
-                  <CheckCircle2 size={13} style={{ marginRight: 4 }} /> Acknowledge
+                  <CheckCircle2 size={13} style={{ marginRight: 4 }} /> Marquer comme traitée
                 </button>
               </div>
             )}

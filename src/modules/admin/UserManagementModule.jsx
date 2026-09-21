@@ -34,7 +34,7 @@ export default function UserManagementModule() {
         body: { ...form, roles: [form.role] },
       });
       setForm({ username: "", displayName: "", password: "", role: "CASHIER" });
-      setMessage({ ok: true, text: "User created." });
+      setMessage({ ok: true, text: "Utilisateur créé." });
       await loadUsers();
     } catch (error) {
       setMessage({ ok: false, text: error.message });
@@ -44,7 +44,7 @@ export default function UserManagementModule() {
   async function changeRole(userId, role) {
     try {
       await request(`/api/auth/users/${userId}/roles`, { method: "PATCH", body: { roles: [role] } });
-      setMessage({ ok: true, text: "Role updated. The user must sign in again for a new token." });
+      setMessage({ ok: true, text: "Rôle mis à jour. L’utilisateur doit se reconnecter pour obtenir un nouveau jeton." });
       await loadUsers();
     } catch (error) {
       setMessage({ ok: false, text: error.message });
@@ -54,7 +54,7 @@ export default function UserManagementModule() {
   async function toggleEnabled(user) {
     try {
       await request(`/api/auth/users/${user.id}/enabled`, { method: "PATCH", body: { enabled: !user.enabled } });
-      setMessage({ ok: true, text: `${user.username} is now ${user.enabled ? "disabled" : "enabled"}.` });
+      setMessage({ ok: true, text: `${user.username} est maintenant ${user.enabled ? "désactivé" : "activé"}.` });
       await loadUsers();
     } catch (error) {
       setMessage({ ok: false, text: error.message });
@@ -63,29 +63,29 @@ export default function UserManagementModule() {
 
   return (
     <>
-      <div className="page-heading"><h1 className="page-title">Users</h1><p className="page-sub">Manage store accounts and their access roles.</p></div>
+      <div className="page-heading"><h1 className="page-title">Utilisateurs</h1><p className="page-sub">Gérez les comptes du magasin et leurs rôles d’accès.</p></div>
       <Message ok={message?.ok} text={message?.text} />
       <div className="grid user-admin-grid">
-        <Panel title="Create user" icon={<UserPlus size={16} />}>
+        <Panel title="Créer un utilisateur" icon={<UserPlus size={16} />}>
           <form onSubmit={createUser}>
-            <Field label="Username"><input type="text" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required minLength={3} /></Field>
-            <Field label="Display name"><input type="text" value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} required /></Field>
-            <Field label="Temporary password"><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required minLength={8} /></Field>
-            <Field label="Role"><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>{ROLES.map((role) => <option key={role}>{role}</option>)}</select></Field>
-            <button className="btn btn-primary" type="submit"><UserPlus size={15} /> Create user</button>
+            <Field label="Nom d’utilisateur"><input type="text" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required minLength={3} /></Field>
+            <Field label="Nom affiché"><input type="text" value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} required /></Field>
+            <Field label="Mot de passe temporaire"><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required minLength={8} /></Field>
+            <Field label="Rôle"><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>{ROLES.map((role) => <option key={role}>{role}</option>)}</select></Field>
+            <button className="btn btn-primary" type="submit"><UserPlus size={15} /> Créer l’utilisateur</button>
           </form>
         </Panel>
-        <Panel title="Store accounts" icon={<Shield size={16} />}>
-          {loading ? <Empty>Loading users...</Empty> : users.length === 0 ? <Empty>No users found.</Empty> : (
+        <Panel title="Comptes du magasin" icon={<Shield size={16} />}>
+          {loading ? <Empty>Chargement des utilisateurs…</Empty> : users.length === 0 ? <Empty>Aucun utilisateur trouvé.</Empty> : (
             <div className="user-list">
               {users.map((user) => (
                 <div className="user-row" key={user.id}>
                   <div className="user-info"><strong>{user.displayName}</strong><span>{user.username}</span></div>
-                  <select value={user.roles[0] || "CASHIER"} onChange={(event) => changeRole(user.id, event.target.value)} aria-label={`Role for ${user.username}`}>
+                  <select value={user.roles[0] || "CASHIER"} onChange={(event) => changeRole(user.id, event.target.value)} aria-label={`Rôle de ${user.username}`}>
                     {ROLES.map((role) => <option key={role}>{role}</option>)}
                   </select>
-                  <span className={`chip ${user.enabled ? "" : "warn"}`}>{user.enabled ? "ACTIVE" : "DISABLED"}</span>
-                  <button type="button" className="btn btn-small" disabled={user.id === auth?.user?.id} onClick={() => toggleEnabled(user)}>{user.enabled ? "Disable" : "Enable"}</button>
+                  <span className={`chip ${user.enabled ? "" : "warn"}`}>{user.enabled ? "ACTIF" : "DÉSACTIVÉ"}</span>
+                  <button type="button" className="btn btn-small" disabled={user.id === auth?.user?.id} onClick={() => toggleEnabled(user)}>{user.enabled ? "Désactiver" : "Activer"}</button>
                 </div>
               ))}
             </div>

@@ -41,7 +41,7 @@ export default function PhoneScannerPage() {
       setBarcode("");
       if (navigator.vibrate) navigator.vibrate(80);
     } catch (err) {
-      setMessage({ ok: false, text: err.message || "Could not send this barcode." });
+      setMessage({ ok: false, text: err.message || "Impossible d’envoyer ce code-barres." });
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -82,7 +82,7 @@ export default function PhoneScannerPage() {
       ]);
       const startCamera = async () => {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("This browser does not support camera access.");
+          throw new Error("Ce navigateur ne prend pas en charge l’accès à la caméra.");
         }
 
         stream = await navigator.mediaDevices.getUserMedia({
@@ -158,7 +158,7 @@ export default function PhoneScannerPage() {
       startCamera().catch((err) => {
         if (!cancelled) {
           setCameraState("error");
-          setMessage({ ok: false, text: err.message || "Camera permission was denied." });
+          setMessage({ ok: false, text: err.message || "L’autorisation d’utiliser la caméra a été refusée." });
         }
       });
     }, 0);
@@ -190,12 +190,12 @@ export default function PhoneScannerPage() {
   return (
     <main className="phone-scanner-page">
       <section className="phone-scanner-card">
-        <div className="phone-scanner-brand"><Smartphone size={18} /> Counter · Phone scanner</div>
-        <h1>Scan an item</h1>
-        <p className="phone-scanner-help">Point your camera at a product barcode. Each successful scan is sent to the open ticket on the PC.</p>
+        <div className="phone-scanner-brand"><Smartphone size={18} /> Counter · Scanner mobile</div>
+        <h1>Scanner un article</h1>
+        <p className="phone-scanner-help">Pointez votre caméra vers le code-barres d’un produit. Chaque scan réussi est envoyé au ticket ouvert sur l’ordinateur.</p>
 
         {!sessionId || !token ? (
-          <Message ok={false} text="This scanner link is incomplete. Generate a new pairing link on the PC." />
+            <Message ok={false} text="Ce lien de scanner est incomplet. Générez un nouveau lien d’association sur l’ordinateur." />
         ) : (
           <>
             <div className={`camera-frame ${cameraState}`}>
@@ -203,51 +203,51 @@ export default function PhoneScannerPage() {
               {cameraState === "ready" && <div className="scan-target" aria-hidden="true" />}
               {cameraState === "idle" && (
                 <button type="button" className="camera-action" onClick={handleStartCamera}>
-                  Start camera
+                  Démarrer la caméra
                 </button>
               )}
-              {cameraState === "starting" && <span>Starting camera…</span>}
-              {cameraState === "invalid" && <span>Invalid pairing</span>}
+              {cameraState === "starting" && <span>Démarrage de la caméra…</span>}
+              {cameraState === "invalid" && <span>Association invalide</span>}
               {cameraState === "error" && (
                 <button type="button" className="camera-action" onClick={handleStartCamera}>
-                  Try camera again
+                  Réessayer la caméra
                 </button>
               )}
             </div>
-            {lastReadBarcode && <div className="phone-read-code">Detected: <code>{lastReadBarcode}</code></div>}
+            {lastReadBarcode && <div className="phone-read-code">Détecté : <code>{lastReadBarcode}</code></div>}
             <Message ok={message?.ok} text={message?.text} />
             {lastScan && (
               <div className="phone-scan-success">
                 <CheckCircle2 size={17} />
-                <span><strong>{lastScan.productName}</strong><small>{lastScan.barcode} · Added to PC ticket</small></span>
+                <span><strong>{lastScan.productName}</strong><small>{lastScan.barcode} · Ajouté au ticket de l’ordinateur</small></span>
               </div>
             )}
             <form className="phone-manual-form" onSubmit={handleManualSubmit}>
-              <input value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="Or type barcode" inputMode="numeric" aria-label="Barcode" />
-              <button className="phone-scan-button" type="submit" disabled={sending || !barcode.trim()}><Barcode size={17} /> Send</button>
+              <input value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="Ou saisir un code-barres" inputMode="numeric" aria-label="Code-barres" />
+              <button className="phone-scan-button" type="submit" disabled={sending || !barcode.trim()}><Barcode size={17} /> Envoyer</button>
             </form>
           </>
         )}
       </section>
       <style>{`
-        .phone-scanner-page { min-height: 100vh; background: var(--paper); padding: 24px 16px; color: var(--ink); }
-        .phone-scanner-card { max-width: 520px; margin: 0 auto; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; padding: 20px; box-shadow: 0 12px 30px rgba(31, 52, 38, .08); }
+        .phone-scanner-page { min-height: 100vh; background: radial-gradient(circle at 80% 0%, #FFF8E7 0, transparent 34%), var(--paper); padding: 28px 16px; color: var(--ink); }
+        .phone-scanner-card { max-width: 520px; margin: 0 auto; background: var(--surface); border: 1px solid var(--hairline); border-radius: 20px; padding: 22px; box-shadow: var(--shadow-md); }
         .phone-scanner-brand { display: flex; align-items: center; gap: 8px; color: var(--green-deep); font-size: 13px; font-weight: 700; }
-        .phone-scanner-card h1 { margin: 22px 0 5px; font-family: 'Space Grotesk', sans-serif; font-size: 28px; }
+        .phone-scanner-card h1 { margin: 26px 0 5px; font-family: 'Fraunces', Georgia, serif; font-size: 32px; letter-spacing: -.03em; }
         .phone-scanner-help { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-top: 0; }
-        .camera-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; margin: 18px 0 12px; border-radius: 12px; background: #15271d; display: flex; align-items: center; justify-content: center; color: #fff; }
+        .camera-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; margin: 18px 0 12px; border-radius: 14px; background: #15271d; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
         .camera-frame video { width: 100%; height: 100%; object-fit: cover; }
         .camera-frame span { position: absolute; padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,.55); font-size: 13px; }
-        .camera-action { position: absolute; border: 0; border-radius: 8px; padding: 12px 16px; background: var(--green); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+        .camera-action { position: absolute; border: 0; border-radius: 10px; padding: 13px 18px; background: #8CCBEA; color: var(--green-deep); font-weight: 800; font-size: 14px; cursor: pointer; }
         .scan-target { position: absolute; width: 72%; height: 28%; border: 2px solid rgba(255,255,255,.9); border-radius: 8px; box-shadow: 0 0 0 999px rgba(0,0,0,.16); pointer-events: none; }
         .phone-read-code { margin-top: 8px; color: var(--ink-soft); font-size: 12px; }
         .phone-read-code code { color: var(--ink); font-family: 'IBM Plex Mono', monospace; }
-        .phone-scan-success { display: flex; align-items: center; gap: 10px; padding: 11px 12px; margin: 12px 0; color: var(--green-deep); background: #E4EFE3; border-radius: 9px; }
+        .phone-scan-success { display: flex; align-items: center; gap: 10px; padding: 11px 12px; margin: 12px 0; color: var(--green-deep); background: #DFECF5; border-radius: 9px; }
         .phone-scan-success span { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
         .phone-scan-success small { color: var(--ink-soft); font-size: 12px; }
         .phone-manual-form { display: flex; gap: 8px; margin-top: 14px; }
-        .phone-manual-form input { min-width: 0; flex: 1; padding: 12px; border: 1px solid var(--hairline-strong); border-radius: 8px; font-size: 16px; }
-        .phone-scan-button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 15px; color: #fff; background: var(--green); font-weight: 700; }
+        .phone-manual-form input { min-width: 0; flex: 1; min-height: 46px; padding: 12px; border: 1px solid var(--hairline-strong); border-radius: 10px; font-size: 16px; }
+        .phone-scan-button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 10px; padding: 0 17px; color: #fff; background: var(--green); font-weight: 700; }
         .phone-scan-button:disabled { opacity: .5; }
       `}</style>
     </main>
