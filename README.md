@@ -1,224 +1,174 @@
-# Supermarket ERP — Frontend
+# Supermarket ERP frontend
 
-React 18 / Vite 5 web application for the single-store grocery ERP.  
-The UI provides a live dashboard, six business modules (Inventory, Pricing, POS, Procurement, Finance, and Admin), and a standalone phone barcode-scanner page.
+The `supermarket-erp` directory contains the React/Vite web application for the supermarket ERP. It provides the authenticated desktop shell for store operations plus a separate phone barcode-scanner page used by the POS.
 
----
+The frontend is a client of the backend in [`../ERP/README.md`](../ERP/README.md). It does not contain business persistence or security enforcement: the API remains the source of truth for permissions and business rules.
 
-## Technology stack
+## Technology
 
-| Technology | Version | Purpose |
-|---|---|---|
-| React | 18 | UI framework |
-| React Router DOM | 6 | Client-side routing |
-| Vite | 5 | Dev server and production bundler |
-| `@vitejs/plugin-basic-ssl` | 1 | Local self-signed HTTPS (dev only) |
-| `lucide-react` | — | Icon library |
-| `qrcode.react` | — | QR code generation for phone scanner pairing |
-| `@zxing/browser` | — | Barcode scanning in the browser (phone scanner page) |
-
----
+| Technology | Version | Use |
+| --- | --- | --- |
+| React | 18.3 | UI |
+| React Router | 6.26 | Client-side routes |
+| Vite | 5.4 | Development server and production build |
+| `@zxing/browser` | 0.2 | Barcode decoding fallback |
+| `qrcode.react` | 4.2 | POS scanner pairing QR codes |
+| `lucide-react` | 0.383 | Icons |
+| `@vitejs/plugin-basic-ssl` | 1.1 | Self-signed HTTPS in development |
 
 ## Requirements
 
-| Dependency | Minimum |
-|---|---|
-| Node.js | 18 |
-| npm | bundled with Node.js |
-| Backend | Running at `http://localhost:8080` (or configured via `VITE_API_BASE_URL`) |
+- Node.js 18 or newer
+- npm
+- A running backend at `http://localhost:8080`, or a configured API base URL
 
----
+## Run locally
 
-## Install and run
+From this directory:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-Open **`https://localhost:5173`**.  
-The dev server uses a self-signed certificate — accept the browser security warning once.
+Open `https://localhost:5173`. Vite listens on `0.0.0.0:5173`, serves HTTPS with a development certificate, and proxies `/api` and `/uploads` to `http://localhost:8080`. Accept the certificate warning in the browser once.
 
-### Build for production
-
-```powershell
-npm run build       # Produces dist/
-npm run preview     # Serves the production bundle locally
-```
-
----
-
-## Configuration
-
-The Vite dev server listens on `0.0.0.0:5173` and proxies `/api` to `http://localhost:8080`.
-
-Create a `.env.local` file (ignored by git) to override the defaults:
-
-```dotenv
-VITE_API_BASE_URL=http://localhost:8080
-VITE_PUBLIC_APP_URL=https://192.168.1.25:5173
-```
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `VITE_API_BASE_URL` | empty (uses current origin) | API base URL used by `apiClient.jsx` |
-| `VITE_PUBLIC_APP_URL` | current browser origin | URL encoded in the phone-scanner QR code |
-
-Set `VITE_PUBLIC_APP_URL` to the host machine's LAN IP address (e.g. `https://192.168.1.25:5173`) so phones on the store Wi-Fi can open the scanner page.
-
-> **Never put secrets in `VITE_*` variables** — Vite bundles them into browser-visible JavaScript.
-
-Restart Vite after editing `.env.local`.
-
----
-
-## Application routes
-
-| Route | Screen | Who can access |
-|---|---|---|
-| `/dashboard` | Operational summary: products, prices, alerts, tills, recent transactions | All roles |
-| `/inventory` | Product catalog, stock receiving, stock levels and lots | ADMIN, MANAGER, INVENTORY_MANAGER |
-| `/pricing` | Product prices and promotions | ADMIN, MANAGER, INVENTORY_MANAGER |
-| `/pos` | Till selection, cashier sessions, sale tickets, checkout, phone pairing | ADMIN, MANAGER, CASHIER |
-| `/procurement` | Suppliers, purchase orders, goods receipt, low-stock alerts | ADMIN, MANAGER, INVENTORY_MANAGER |
-| `/finance` | Journals, P&L report, supplier invoices, payments | ADMIN, MANAGER, ACCOUNTANT |
-| `/users` | User and role management (admin only) | ADMIN |
-| `/scanner` | Phone barcode-scanner page (opened via QR link from POS) | Scanner token |
-
-`/` redirects to `/dashboard`. Unknown routes also redirect to `/dashboard`.
-
----
-
-## Role-to-module visibility
-
-| Role | Visible modules |
-|---|---|
-| `ADMIN` | Dashboard, Inventory, Pricing, POS, Procurement, Finance, Users |
-| `MANAGER` | Dashboard, Inventory, Pricing, POS, Procurement, Finance |
-| `CASHIER` | Dashboard, POS |
-| `INVENTORY_MANAGER` | Dashboard, Inventory, Pricing, Procurement |
-| `ACCOUNTANT` | Dashboard, Finance |
-
-Module visibility is enforced in the navigation and routing. The backend enforces the same rules on every API call — frontend hiding is convenience only.
-
----
-
-## Source organisation
-
-```text
-src/
-├── main.jsx                              React entry point; mounts <App /> with providers
-├── App.jsx                               Application shell: navigation, routes, connection status
-├── auth/
-│   └── AuthContext.jsx                   JWT storage, login/logout, current-user state
-├── lib/
-│   └── apiClient.jsx                     Shared fetch client (bearer-token, JSON, connection status)
-├── design/
-│   ├── tokens.css                        Global design tokens: colors, typography, spacing
-│   └── components.jsx                    Shared UI components (Button, Card, Modal, Table, …)
-└── modules/
-    ├── dashboard/
-    │   └── DashboardModule.jsx           Summary cards, alert banners, quick-stats
-    ├── inventory/
-    │   └── InventoryModule.jsx           Products, product families, stock levels and lots
-    ├── pricing/
-    │   └── PricingModule.jsx             Product prices and time-bounded promotions
-    ├── pos/
-    │   ├── POSModule.jsx                 Tills, cashier sessions, transactions, checkout
-    │   └── PhoneScannerPage.jsx          Standalone phone scanner (accessed via QR link)
-    ├── procurement/
-    │   └── ProcurementModule.jsx         Suppliers, purchase orders, receiving, alerts
-    ├── finance/
-    │   └── FinanceModule.jsx             Journals, P&L, supplier invoices, payments
-    └── admin/
-        └── UsersModule.jsx               User list, role management, enable/disable
-```
-
-Each module is self-contained: it fetches data through `useApi()`, maintains its own local state, and refreshes after mutations. There is no shared global state store.
-
----
-
-## API client
-
-`src/lib/apiClient.jsx` exposes `<ApiProvider>` (mount at root) and the `useApi()` hook.
-
-```jsx
-import { useApi } from '../lib/apiClient';
-
-function MyComponent() {
-  const { request } = useApi();
-
-  // GET
-  const products = await request('/api/inventory/products');
-
-  // POST with a JSON body
-  await request('/api/inventory/products', {
-    method: 'POST',
-    body: { sku: 'MILK-001', name: 'Full-Fat Milk', unitType: 'EACH' },
-  });
-
-  // DELETE
-  await request(`/api/pricing/prices/${productId}`, { method: 'DELETE' });
-}
-```
-
-The client automatically:
-
-- Reads the stored JWT and adds `Authorization: Bearer <token>` to every request.
-- Adds `Content-Type: application/json` when a body is provided.
-- Parses successful JSON responses; returns `null` for empty `204` responses.
-- Extracts the backend `message` field from error responses.
-- Tracks connection status (`unknown` / `ok` / `fail`) shown in the top-right corner of the shell.
-
----
-
-## Authentication flow
-
-1. On load, the frontend calls `GET /api/auth/setup-status`.
-2. If no admin exists, the **Admin Setup** form is shown (first-run only).
-3. After setup or on subsequent visits, the **Login** page is shown.
-4. On successful login the JWT is stored in `localStorage` and the user is redirected to `/dashboard`.
-5. Signing out removes the JWT and returns to the login page.
-6. Role changes take effect on the next login.
-
----
-
-## Phone scanner (store LAN)
-
-The phone scanner lets a cashier scan barcodes with a phone while the POS ticket is open on the till computer.
-
-### Setup steps
-
-1. Start the frontend with Vite bound to `0.0.0.0` (the default dev config).
-2. Find the till computer's LAN IP address, e.g. `192.168.1.25`.
-3. Set `VITE_PUBLIC_APP_URL=https://192.168.1.25:5173` in `.env.local` and restart Vite.
-4. Open **`https://192.168.1.25:5173/pos`** on the till computer (not `localhost`).
-5. Start a transaction, tap **Use phone**, and scan the displayed QR code with the phone.
-6. Both devices must be on the same Wi-Fi network. Accept the self-signed certificate on the phone.
-
-The pairing expires after 30 minutes. Pairings are stored in backend memory and are lost on backend restart.
-
----
-
-## Development guidelines
-
-- **Module isolation** — keep all screen logic, API calls, and local state inside the module folder.
-- **Shared design** — reuse `design/components.jsx` and `design/tokens.css` before adding one-off styles.
-- **API calls** — always use `useApi()` so connection status and error handling stay consistent.
-- **API paths** — keep all paths under `/api` so the Vite proxy works without extra configuration.
-- **Build before committing** — run `npm run build` to catch JSX syntax and bundling errors early.
-- **Permissions** — keep frontend role checks aligned with backend security rules; frontend hiding is for UX, not security.
-
----
-
-## Backend dependency
-
-The frontend expects the backend described in [../ERP/README.md](../ERP/README.md).
+Start the backend in a second terminal:
 
 ```powershell
 cd ..\ERP
 .\mvnw.cmd spring-boot:run
 ```
 
-If the backend is hosted elsewhere, set `VITE_API_BASE_URL` to its base URL.  
-The backend must allow the browser origin in its CORS configuration.
+## Configuration
+
+Create `.env.local` only when you need to override the defaults:
+
+```dotenv
+# Optional in local development: an empty value uses the Vite same-origin proxy.
+VITE_API_BASE_URL=
+
+# Optional: URL embedded in the POS phone-scanner QR code.
+VITE_PUBLIC_APP_URL=https://192.168.1.25:5173
+```
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | empty | Prefix for API requests. Empty uses the current origin and Vite's `/api` proxy during development. |
+| `VITE_PUBLIC_APP_URL` | current browser origin | Public URL encoded into phone-scanner pairing links. |
+
+`VITE_*` values are compiled into browser JavaScript. Never put passwords, JWT secrets, or other private values in them. Restart Vite after changing `.env.local`.
+
+For a phone on the store LAN, set `VITE_PUBLIC_APP_URL` to the till computer's reachable LAN URL, not `localhost`.
+
+## Available routes
+
+| Route | Screen | Frontend access |
+| --- | --- | --- |
+| `/dashboard` | Operational summary | `ADMIN` only |
+| `/inventory` | Products, families, stock, lots, receiving | `ADMIN`, `MANAGER`, `INVENTORY_MANAGER` |
+| `/pricing` | Prices and promotions | `ADMIN`, `MANAGER`, `INVENTORY_MANAGER` |
+| `/pos` | Tills, cash sessions, transactions, checkout, scanner pairing | `ADMIN`, `MANAGER`, `CASHIER` |
+| `/procurement` | Suppliers, purchase orders, receiving, alerts | `ADMIN`, `MANAGER`, `INVENTORY_MANAGER` |
+| `/finance` | Journals, P&L, supplier invoices, payments | `ADMIN`, `MANAGER`, `ACCOUNTANT` |
+| `/users` | User and role administration | `ADMIN` only |
+| `/scanner` | Standalone phone barcode scanner | Pairing token in the URL |
+
+`/` and unknown routes redirect to the first module available to the signed-in user's roles. `/scanner` is intentionally outside the desktop authentication shell; the short-lived scanner token is checked by the backend.
+
+The backend enforces these permissions independently. Hiding a route in the frontend is only a usability feature, not a security boundary.
+
+## First login
+
+1. The login page calls `GET /api/auth/setup-status`.
+2. If the database has no users, it shows the first-admin form.
+3. The first account receives the `ADMIN` role.
+4. Later visits show the login form; public registration is closed.
+5. A successful login stores the returned session in browser `localStorage` and redirects to the user's first permitted module.
+6. Signing out removes the stored session.
+
+Tokens are sent as `Authorization: Bearer <token>`. A `401` from a non-authentication endpoint clears the local session and returns the user to the login state.
+
+## Phone barcode scanner
+
+The POS can pair a phone with one in-progress transaction for 30 minutes.
+
+1. Put the till computer and phone on the same Wi-Fi network.
+2. Find the till computer's LAN address, for example `192.168.1.25`.
+3. Set `VITE_PUBLIC_APP_URL=https://192.168.1.25:5173` and restart Vite.
+4. Open `https://192.168.1.25:5173/pos` on the till computer.
+5. Start a transaction, choose **Use phone**, and scan the QR code with the phone.
+6. Accept the development certificate on the phone and allow camera access.
+
+The phone page supports camera scanning and manual barcode entry. The scanner resolves the barcode as a product SKU. Pairings are stored in backend memory, expire after 30 minutes, and disappear if the backend restarts.
+
+## Source organisation
+
+```text
+src/
+├── main.jsx                         React entry point and providers
+├── App.jsx                          Shell, navigation, routes, role guards
+├── auth/LoginPage.jsx               Setup and login screens
+├── lib/apiClient.jsx                API provider, JWT session, request helper
+├── design/                          Tokens, shared components, visual styles
+└── modules/
+    ├── dashboard/DashboardModule.jsx
+    ├── inventory/InventoryModule.jsx
+    ├── pricing/PricingModule.jsx
+    ├── pos/POSModule.jsx
+    ├── pos/PhoneScannerPage.jsx
+    ├── procurement/ProcurementModule.jsx
+    ├── finance/FinanceModule.jsx
+    └── admin/UserManagementModule.jsx
+```
+
+Each business screen keeps its local loading state and refreshes after mutations. There is no shared domain-state store. Use `useApi()` for backend calls so authentication headers, JSON handling, connection status, and error parsing stay consistent.
+
+Example:
+
+```jsx
+const { request } = useApi();
+
+const products = await request("/api/inventory/products");
+
+await request("/api/inventory/products", {
+  method: "POST",
+  body: { sku: "MILK-001", name: "Full-Fat Milk", unitType: "EACH" },
+});
+```
+
+The request helper automatically:
+
+- adds the stored bearer token;
+- serializes JSON bodies and accepts `FormData` for image uploads;
+- parses JSON responses and returns `null` for empty responses;
+- extracts the backend `message` from errors; and
+- tracks `unknown`, `ok`, and `fail` connection status for the desktop shell.
+
+## Build and preview
+
+```powershell
+# Production bundle in dist/
+npm run build
+
+# Serve the bundle locally for a smoke test
+npm run preview
+```
+
+The Vite development proxy is not automatically available when serving `dist/`. For a deployed frontend, either serve it behind the same HTTPS reverse proxy as the API or set `VITE_API_BASE_URL` to the API origin and configure the backend CORS policy for the exact frontend origin.
+
+## Frontend development rules
+
+- Keep screen-specific logic and API calls in the relevant module.
+- Reuse `design/components.jsx` and `design/tokens.css` for shared UI.
+- Keep API paths under `/api` so local proxying works.
+- Keep role checks aligned with backend security rules.
+- Use `npm run build` before committing UI changes.
+- Do not put secrets in source code or `VITE_*` variables.
+
+## Known runtime limitations
+
+- The phone pairing is in-memory and is not shared across backend instances.
+- Development HTTPS uses a self-signed certificate; production needs a trusted certificate.
+- The frontend has no offline mode or shared client-side domain store.
+- Backend availability, CORS, JWT validity, and business-rule errors are surfaced through the shared API client; check the backend logs for server-side details.
