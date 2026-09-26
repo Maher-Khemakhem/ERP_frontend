@@ -1,0 +1,50 @@
+.online-orders-module { max-width: 1500px; margin: 0 auto; }
+.online-orders-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 23px; }
+.online-orders-heading .page-title { margin-bottom: 4px; }
+.online-orders-kicker { margin: 0 0 4px; color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.online-orders-subtitle { margin: 0; color: var(--ink-soft); font-size: 13px; }
+.online-order-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+.online-order-stat { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 11px; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface); }
+.online-order-stat > span { grid-row: 1 / span 2; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--green-soft); color: var(--green-deep); }
+.online-order-stat small { color: var(--ink-soft); font-size: 11px; }
+.online-order-stat strong { color: var(--green-deep); font: 700 23px Fraunces, Georgia, serif; line-height: 1.1; }
+.online-orders-workspace { display: grid; grid-template-columns: minmax(330px, .9fr) minmax(440px, 1.1fr); gap: 18px; align-items: start; }
+.online-order-filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 12px; }
+.online-order-search { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 0 9px; border: 1px solid var(--hairline); border-radius: 7px; color: var(--ink-faint); background: #fff; }
+.online-order-search input { width: 100%; min-width: 0; height: 35px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 12px; }
+.online-order-filters select { max-width: 180px; padding: 0 8px; border: 1px solid var(--hairline); border-radius: 7px; color: var(--ink); background: #fff; font-size: 11px; }
+.online-order-list { display: flex; flex-direction: column; max-height: 680px; overflow: auto; }
+.online-order-list-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; padding: 12px 10px; border: 0; border-top: 1px solid var(--hairline); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.online-order-list-item:hover, .online-order-list-item.selected { border-radius: 8px; background: #edf4f8; }
+.online-order-list-main, .online-order-list-side { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.online-order-list-main strong { color: var(--green-deep); font-size: 13px; }
+.online-order-list-main small { overflow: hidden; color: var(--ink-soft); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.online-order-list-side { align-items: flex-end; flex: 0 0 auto; }
+.online-order-list-side > b { font-size: 11px; }
+.online-order-status { display: inline-block; max-width: 100%; padding: 4px 8px; border-radius: 999px; background: #ecefe8; color: var(--ink-soft); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.online-order-status.status-pending_payment, .online-order-status.status-preparing { background: var(--amber-bg); color: var(--amber); }
+.online-order-status.status-confirmed, .online-order-status.status-ready, .online-order-status.status-completed { background: var(--green-soft); color: var(--green-deep); }
+.online-order-status.status-cancelled, .online-order-status.status-expired { background: var(--red-bg); color: var(--red); }
+.online-order-detail-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--hairline); }
+.online-order-detail-head small, .online-order-meta small { display: block; margin-bottom: 3px; color: var(--ink-faint); font-size: 10px; }
+.online-order-detail-head h2 { margin: 0; color: var(--green-deep); font: 600 22px Fraunces, Georgia, serif; }
+.online-order-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 16px; padding: 15px 0; border-bottom: 1px solid var(--hairline); }
+.online-order-meta strong { display: block; overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.online-order-lines-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 16px 0 6px; }
+.online-order-lines-heading h3 { margin: 0; font: 600 17px Fraunces, Georgia, serif; }
+.online-order-lines-heading span { color: var(--ink-soft); font-size: 10px; }
+.online-order-line { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--hairline); }
+.online-order-line > div { min-width: 0; }
+.online-order-line strong { display: block; color: var(--ink); font-size: 12px; }
+.online-order-line small { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 10px; }
+.online-order-totals { width: min(100%, 320px); margin: 14px 0 0 auto; }
+.online-order-totals > div { display: flex; justify-content: space-between; gap: 12px; margin: 7px 0; color: var(--ink-soft); font-size: 11px; }
+.online-order-totals strong { color: var(--ink); font-size: 11px; }
+.online-order-totals .grand-total { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-strong); color: var(--green-deep); font-size: 13px; font-weight: 700; }
+.online-order-totals .grand-total strong { color: var(--green-deep); font: 700 18px Fraunces, Georgia, serif; }
+.online-order-advance { width: 100%; justify-content: center; margin-top: 18px; }
+.online-order-cancel { width: 100%; justify-content: center; margin-top: 8px; color: var(--red); }
+.online-orders-loading { padding: 25px 8px; color: var(--ink-soft); text-align: center; font-size: 12px; }
+@media (max-width: 1080px) { .online-orders-workspace { grid-template-columns: 1fr; } .online-order-list { max-height: 420px; } }
+@media (max-width: 760px) { .online-order-stats { grid-template-columns: 1fr 1fr; } .online-orders-heading { align-items: flex-start; } }
+@media (max-width: 480px) { .online-orders-heading { flex-direction: column; } .online-order-stats { gap: 8px; } .online-order-stat { padding: 11px; } .online-order-filters { grid-template-columns: 1fr; } .online-order-filters select { max-width: none; min-height: 35px; } .online-order-meta { grid-template-columns: 1fr; } }

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, Package, Tag, ShoppingCart, Truck, Wallet, Shield, LogOut } from "lucide-react";
+import { LayoutGrid, Package, Tag, ShoppingCart, ShoppingBag, Truck, Wallet, Shield, LogOut } from "lucide-react";
 import { useApi } from "./lib/apiClient.jsx";
 import LoginPage from "./auth/LoginPage.jsx";
 import DashboardModule from "./modules/dashboard/DashboardModule.jsx";
@@ -9,10 +9,12 @@ import POSModule from "./modules/pos/POSModule.jsx";
 import ProcurementModule from "./modules/procurement/ProcurementModule.jsx";
 import FinanceModule from "./modules/finance/FinanceModule.jsx";
 import UserManagementModule from "./modules/admin/UserManagementModule.jsx";
+import OnlineOrdersModule from "./modules/ecommerce/OnlineOrdersModule.jsx";
 import PhoneScannerPage from "./modules/pos/PhoneScannerPage.jsx";
 import VisualRefreshStyles from "./design/VisualRefreshStyles.jsx";
 
 const MODULES = [
+  { key: "online-orders", path: "/online-orders", label: "Commandes en ligne", icon: ShoppingBag, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"], group: "GÃ©rer le magasin" },
   { key: "dashboard", path: "/dashboard", label: "Tableau de bord", icon: LayoutGrid, status: "active", roles: ["ADMIN"], group: "Gérer le magasin" },
   { key: "pos", path: "/pos", label: "Caisse", icon: ShoppingCart, status: "active", roles: ["ADMIN", "MANAGER", "CASHIER"], group: "Gérer le magasin" },
   { key: "inventory", path: "/inventory", label: "Stock", icon: Package, status: "active", roles: ["ADMIN", "MANAGER", "INVENTORY_MANAGER"], group: "Stocks et approvisionnement" },
@@ -30,12 +32,15 @@ function moduleByKey(key) {
 }
 
 function landingPathForRoles(roles = []) {
-  return MODULES.find((module) => module.status === "active" && module.roles.some((role) => roles.includes(role)))?.path || "/";
+  const preferred = MODULES.find((module) => module.key !== "online-orders" && module.status === "active" && module.roles.some((role) => roles.includes(role)));
+  const fallback = MODULES.find((module) => module.status === "active" && module.roles.some((role) => roles.includes(role)));
+  return preferred?.path || fallback?.path || "/";
 }
 
 function Sidebar() {
   const location = useLocation();
   const { hasAnyRole, auth, logout } = useApi();
+  const navGroups = [...NAV_GROUPS, "E-commerce"];
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -46,8 +51,8 @@ function Sidebar() {
         <span className="brand-sub">Opérations du magasin</span>
       </div>
       <nav className="nav">
-        {NAV_GROUPS.map((group) => {
-          const groupModules = MODULES.filter((m) => m.group === group && hasAnyRole(m.roles));
+        {navGroups.map((group) => {
+          const groupModules = MODULES.filter((m) => (m.group === group || (m.key === "online-orders" && group === "E-commerce")) && hasAnyRole(m.roles));
           if (!groupModules.length) return null;
           return (
             <div className="nav-group" key={group}>
@@ -108,6 +113,7 @@ export default function App() {
           <Route path="/inventory" element={<RoleRoute roles={moduleByKey("inventory").roles}><InventoryModule /></RoleRoute>} />
           <Route path="/pricing" element={<RoleRoute roles={moduleByKey("pricing").roles}><PricingModule /></RoleRoute>} />
           <Route path="/pos" element={<RoleRoute roles={moduleByKey("pos").roles}><POSModule /></RoleRoute>} />
+          <Route path="/online-orders" element={<RoleRoute roles={moduleByKey("online-orders").roles}><OnlineOrdersModule /></RoleRoute>} />
           <Route path="/procurement" element={<RoleRoute roles={moduleByKey("procurement").roles}><ProcurementModule /></RoleRoute>} />
           <Route path="/finance" element={<RoleRoute roles={moduleByKey("finance").roles}><FinanceModule /></RoleRoute>} />
           <Route path="/users" element={<RoleRoute roles={moduleByKey("users").roles}><UserManagementModule /></RoleRoute>} />
