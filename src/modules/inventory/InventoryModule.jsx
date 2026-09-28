@@ -130,6 +130,12 @@ export default function InventoryModule() {
     refreshAll();
   }, [refreshAll]);
 
+  useEffect(() => {
+    if (tab !== "stock") return undefined;
+    const intervalId = window.setInterval(fetchStockSummaries, 30000);
+    return () => window.clearInterval(intervalId);
+  }, [tab, fetchStockSummaries]);
+
   // Open Receive Stock modal for a specific product or null
   const handleOpenReceive = useCallback((productOrId = null) => {
     if (!productOrId) {
@@ -776,13 +782,15 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
     return products.map((p) => {
       const summary = summaryMap.get(p.id);
       const totalQuantity = summary ? Number(summary.totalQuantity) : 0;
+      const reservedQuantity = summary ? Number(summary.reservedQuantity || 0) : 0;
+      const availableQuantity = summary ? Number(summary.availableQuantity ?? summary.totalQuantity) : 0;
       const lotCount = summary ? summary.lotCount : 0;
       const earliestExpiry = summary ? summary.earliestExpiryDate : null;
 
       let status = "OUT_OF_STOCK";
-      if (totalQuantity > p.reorderPoint) {
+      if (availableQuantity > p.reorderPoint) {
         status = "IN_STOCK";
-      } else if (totalQuantity > 0) {
+      } else if (availableQuantity > 0) {
         status = "LOW_STOCK";
       }
 
@@ -793,6 +801,8 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
       return {
         product: p,
         totalQuantity,
+        reservedQuantity,
+        availableQuantity,
         lotCount,
         earliestExpiry,
         daysUntilEarliestExpiry,
@@ -953,10 +963,10 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
         ) : (
           <div className="stock-cards-grid">
             {filteredList.map((item) => {
-              const { product, totalQuantity, lotCount, earliestExpiry, daysUntilEarliestExpiry, status } = item;
+              const { product, totalQuantity, reservedQuantity, availableQuantity, lotCount, earliestExpiry, daysUntilEarliestExpiry, status } = item;
               const unitLabel = product.unitType === "WEIGHT" ? "kg" : "unités";
               const reorderRatio = product.reorderPoint > 0
-                ? Math.min(100, Math.round((totalQuantity / product.reorderPoint) * 100))
+                ? Math.min(100, Math.round((availableQuantity / product.reorderPoint) * 100))
                 : 100;
 
               return (
@@ -984,8 +994,12 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
 
                   <div className="stock-card-body">
                     <div className="stock-level-display">
-                      <span className="stock-level-num">{totalQuantity}</span>
-                      <span className="stock-level-unit">{unitLabel} en stock</span>
+                      <span className="stock-level-num">{availableQuantity}</span>
+                      <span className="stock-level-unit">{unitLabel} disponibles</span>
+                    </div>
+                    <div className="stock-quantity-breakdown">
+                      <span>En stock physique : <strong>{totalQuantity}</strong></span>
+                      <span>RÃ©servÃ© : <strong>{reservedQuantity}</strong></span>
                     </div>
 
                     <div className="stock-progress-bar-wrap">
@@ -1068,6 +1082,11 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                   <div>
                     <div className="lot-product-name">{inspectedProduct?.name}</div>
                   <div className="lot-product-sku">SKU : {inspectedProduct?.sku}</div>
+                    <div className="lot-stock-breakdown">
+                      <span>Disponible <strong>{inspectStock.availableQuantity ?? inspectStock.totalQuantity}</strong></span>
+                      <span>Physique <strong>{inspectStock.totalQuantity}</strong></span>
+                      <span>RÃ©servÃ© <strong>{inspectStock.reservedQuantity || 0}</strong></span>
+                    </div>
                     <div className="lot-total-stat">
                       <strong>{inspectStock.totalQuantity}</strong>
                       <span>{inspectedProduct?.unitType === "WEIGHT" ? "kg" : "unités"} en stock</span>
@@ -1117,6 +1136,12 @@ function StockTab({ products, families, stockSummaries, loading, onRefresh, onOp
                           <div className="lot-quantity">
                             {lot.quantity} {inspectedProduct?.unitType === "WEIGHT" ? "kg" : "unités"}
                           </div>
+                        </div>
+
+                        <div className="lot-stock-breakdown lot-stock-breakdown-row">
+                          <span>Physique <strong>{lot.quantity}</strong></span>
+                          <span>RÃ©servÃ© <strong>{lot.reservedQuantity || 0}</strong></span>
+                          <span>Disponible <strong>{lot.availableQuantity ?? lot.quantity}</strong></span>
                         </div>
 
                         <div className="lot-card-grid">
@@ -1578,6 +1603,8 @@ const moduleStyles = `
   .stock-level-display { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
   .stock-level-num { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: var(--ink); }
   .stock-level-unit { font-size: 12px; color: var(--ink-soft); }
+  .stock-quantity-breakdown { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -3px 0 10px; color: var(--ink-soft); font-size: 11px; }
+  .stock-quantity-breakdown strong { color: var(--ink); }
 
   .stock-progress-bar-wrap { height: 6px; background: #F1F4EE; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
   .stock-progress-bar { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
@@ -1601,6 +1628,9 @@ const moduleStyles = `
   .lot-details-content { display: flex; flex-direction: column; gap: 16px; }
   .lot-summary-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #FBFBF8; border: 1px solid var(--hairline); border-radius: 8px; }
   .lot-product-sku { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .lot-stock-breakdown { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 7px; color: var(--ink-soft); font-size: 11px; }
+  .lot-stock-breakdown strong { color: var(--ink); }
+  .lot-stock-breakdown-row { margin: 0 0 8px; padding: 7px 10px; border-radius: 6px; background: #F9FBF8; }
   .lot-total-stat { display: flex; align-items: baseline; gap: 6px; }
   .lot-total-stat strong { font-family: 'Space Grotesk', sans-serif; font-size: 22px; color: var(--green-deep); }
   .lot-total-stat span { font-size: 12.5px; color: var(--ink-soft); }

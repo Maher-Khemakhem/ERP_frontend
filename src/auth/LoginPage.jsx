@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LockKeyhole, LogIn, UserPlus } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, LogIn, UserPlus } from "lucide-react";
 import { useApi } from "../lib/apiClient.jsx";
 
 export default function LoginPage() {
@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [setupRequired, setSetupRequired] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [form, setForm] = useState({ username: "", displayName: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -75,7 +76,19 @@ export default function LoginPage() {
           )}
           <label className="auth-field">
             <span>Mot de passe</span>
-            <input type="password" autoComplete={setupRequired ? "new-password" : "current-password"} value={form.password} onChange={(event) => update("password", event.target.value)} required minLength={8} disabled={checkingSetup || submitting} />
+            <div className="auth-password-control">
+              <input type={showPassword ? "text" : "password"} autoComplete={setupRequired ? "new-password" : "current-password"} value={form.password} onChange={(event) => update("password", event.target.value)} required minLength={8} disabled={checkingSetup || submitting} />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                title={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                disabled={checkingSetup || submitting}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
           </label>
           <button className="btn btn-primary auth-submit" type="submit" disabled={checkingSetup || submitting}>
             {setupRequired ? <UserPlus size={16} /> : <LogIn size={16} />}
@@ -96,7 +109,13 @@ export default function LoginPage() {
         .auth-heading p { margin: 5px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
         .auth-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
         .auth-field span { color: var(--ink-soft); font-size: 12px; font-weight: 700; letter-spacing: .01em; }
+        .auth-password-control { position: relative; }
         .auth-field input { width: 100%; min-height: 44px; border: 1px solid var(--hairline-strong); border-radius: 9px; padding: 11px 12px; background: #FCFAF4; color: var(--ink); font: inherit; }
+        .auth-password-control input { padding-right: 44px; }
+        .auth-password-toggle { position: absolute; top: 50%; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; transform: translateY(-50%); border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft); cursor: pointer; }
+        .auth-password-toggle:hover:not(:disabled) { background: rgba(47, 104, 68, .09); color: var(--green-deep); }
+        .auth-password-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+        .auth-password-toggle:disabled { cursor: default; opacity: .55; }
         .auth-field input:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--green); }
         .auth-submit { width: 100%; justify-content: center; margin-top: 10px; min-height: 46px; padding: 11px 14px; border-radius: 10px; }
         .auth-error { margin-bottom: 16px; padding: 11px 12px; border-radius: 9px; background: var(--red-bg); color: var(--red); font-size: 13px; }
