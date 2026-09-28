@@ -157,6 +157,12 @@ npm run preview
 
 The Vite development proxy is not automatically available when serving `dist/`. For a deployed frontend, either serve it behind the same HTTPS reverse proxy as the API or set `VITE_API_BASE_URL` to the API origin and configure the backend CORS policy for the exact frontend origin.
 
+## GitHub Actions
+
+`.github/workflows/ci.yml` runs `npm ci` and `npm run build` on pushes, pull requests, and manual runs with Node.js 22. Successful push and manual runs attach the built `dist/` files as an `admin-ui-<commit SHA>` artifact for 14 days. Pull requests run the checks without publishing an artifact.
+
+The artifact contains the admin UI from the `ERP_frontend` repository. The customer storefront, Caddy configuration, and local Kubernetes manifests are outside that repository and are not part of this workflow.
+
 ## Frontend development rules
 
 - Keep screen-specific logic and API calls in the relevant module.
