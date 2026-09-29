@@ -24,11 +24,11 @@ function statusLabel(status) {
 }
 
 function nextStatus(status) {
-  return { CONFIRMED: "PREPARING", PREPARING: "READY", READY: "COMPLETED" }[status] || null;
+  return { CONFIRMED: "PREPARING", PREPARING: "READY" }[status] || null;
 }
 
 function actionLabel(status) {
-  return { CONFIRMED: "Commencer la préparation", PREPARING: "Marquer comme prête", READY: "Terminer la commande" }[status] || null;
+  return { CONFIRMED: "Commencer la préparation", PREPARING: "Marquer comme prête" }[status] || null;
 }
 
 function dateLabel(value) {
@@ -123,6 +123,23 @@ export default function OnlineOrdersModule() {
     }
   }
 
+  async function completePickup(order, code) {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const updated = await request(`/api/online-orders/${order.id}/pickup`, {
+        method: "POST",
+        body: { code },
+      });
+      setOrders((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setMessage({ ok: true, text: `${order.orderNumber} : retrait confirmé.` });
+    } catch (err) {
+      setMessage({ ok: false, text: err.message || "Code de retrait invalide." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="online-orders-module">
       <div className="online-orders-heading">
@@ -163,7 +180,7 @@ export default function OnlineOrdersModule() {
         </Panel>
 
         <Panel title="Détail de la commande" icon={<PackageCheck size={16} />}>
-          {!selected ? <Empty>Sélectionnez une commande pour afficher ses détails.</Empty> : <OrderDetails order={selected} saving={saving} onAdvance={() => advanceOrder(selected)} onCancel={() => cancelOrder(selected)} />}
+          {!selected ? <Empty>Sélectionnez une commande pour afficher ses détails.</Empty> : <OrderDetails key={selected.id} order={selected} saving={saving} onAdvance={() => advanceOrder(selected)} onCancel={() => cancelOrder(selected)} onPickup={(code) => completePickup(selected, code)} />}
         </Panel>
       </div>
     </div>
@@ -178,8 +195,9 @@ function StatusPill({ status }) {
   return <span className={`online-order-status status-${status?.toLowerCase()}`}>{statusLabel(status)}</span>;
 }
 
-function OrderDetails({ order, saving, onAdvance, onCancel }) {
+function OrderDetails({ order, saving, onAdvance, onCancel, onPickup }) {
   const next = nextStatus(order.status);
+  const [pickupCode, setPickupCode] = useState("");
   return <div className="online-order-detail">
     <div className="online-order-detail-head"><div><small>Référence</small><h2>{order.orderNumber}</h2></div><StatusPill status={order.status} /></div>
     <div className="online-order-meta">
@@ -190,6 +208,8 @@ function OrderDetails({ order, saving, onAdvance, onCancel }) {
       <div><small>Échéance de paiement</small><strong>{dateLabel(order.expiresAt)}</strong></div>
       {order.cancelledAt && <div><small>Annulée le</small><strong>{dateLabel(order.cancelledAt)}</strong></div>}
       {order.expiredAt && <div><small>Expirée le</small><strong>{dateLabel(order.expiredAt)}</strong></div>}
+      {order.pickedUpAt && <div><small>Retirée le</small><strong>{dateLabel(order.pickedUpAt)}</strong></div>}
+      {order.pickedUpBy && <div><small>Remise par</small><strong>{order.pickedUpBy}</strong></div>}
       <div><small>Référence paiement</small><strong>{order.paymentReference || "En attente"}</strong></div>
     </div>
 
@@ -205,6 +225,11 @@ function OrderDetails({ order, saving, onAdvance, onCancel }) {
       <div className="grand-total"><span>Total</span><strong>{money(order.totalAmount)}</strong></div>
     </div>
     {next && <button className="btn btn-primary online-order-advance" onClick={onAdvance} disabled={saving}>{saving ? "Mise à jour…" : actionLabel(order.status)}</button>}
+    {order.status === "READY" && <form className="online-order-pickup" onSubmit={(event) => { event.preventDefault(); onPickup(pickupCode); }}>
+      <label htmlFor="pickup-code">Code de retrait présenté par le client</label>
+      <input id="pickup-code" type="text" autoComplete="off" spellCheck="false" maxLength={16} value={pickupCode} onChange={(event) => setPickupCode(event.target.value)} placeholder="XXXXXX-XXXXXX" required disabled={saving} />
+      <button className="btn btn-primary online-order-advance" disabled={saving || !pickupCode.trim()}>{saving ? "Vérification…" : "Confirmer la remise"}</button>
+    </form>}
     {order.status === "PENDING_PAYMENT" && <button className="btn online-order-cancel" onClick={onCancel} disabled={saving}>{saving ? "Mise à jour…" : "Annuler et libérer le stock"}</button>}
   </div>;
 }

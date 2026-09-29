@@ -43,6 +43,10 @@
 .online-order-totals .grand-total { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-strong); color: var(--green-deep); font-size: 13px; font-weight: 700; }
 .online-order-totals .grand-total strong { color: var(--green-deep); font: 700 18px Fraunces, Georgia, serif; }
 .online-order-advance { width: 100%; justify-content: center; margin-top: 18px; }
+.online-order-pickup { display: grid; gap: 8px; margin-top: 18px; }
+.online-order-pickup label { color: var(--ink-soft); font-size: 11px; font-weight: 600; }
+.online-order-pickup input { width: 100%; padding: 10px 12px; border: 1px solid var(--hairline-strong); border-radius: 7px; background: #fff; color: var(--ink); font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.online-order-pickup .online-order-advance { margin-top: 2px; }
 .online-order-cancel { width: 100%; justify-content: center; margin-top: 8px; color: var(--red); }
 .online-orders-loading { padding: 25px 8px; color: var(--ink-soft); text-align: center; font-size: 12px; }
 @media (max-width: 1080px) { .online-orders-workspace { grid-template-columns: 1fr; } .online-order-list { max-height: 420px; } }
