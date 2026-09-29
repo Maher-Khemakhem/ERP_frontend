@@ -499,6 +499,11 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         setTransactionId(data.id);
         setLines(nextLines);
         setCompleted(data.status === "COMPLETED" || data.status === "VOIDED");
+        setCompletedTicket(data.status === "COMPLETED" ? {
+          id: data.id, lines: nextLines, total: data.total,
+          netTotal: data.netTotal, vatTotal: data.vatTotal,
+          paymentMethod: data.paymentMethod, completedAt: data.completedAt,
+        } : null);
         setPaymentMethod(data.paymentMethod || "CASH");
         setTransactionMsg(null);
         setVoidReason("");
@@ -981,18 +986,12 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                 <>
                   <Field label="Mode de paiement">
                     <div className="payment-toggle">
-                      <button
-                        type="button"
-                        className={`payment-option ${paymentMethod === "CASH" ? "active" : ""}`}
-                        onClick={() => setPaymentMethod("CASH")}
-                      >
+                      <button type="button" className={`payment-option ${paymentMethod === "CASH" ? "active" : ""}`}
+                        onClick={() => setPaymentMethod("CASH")}>
                         <Banknote size={16} /> Espèces
                       </button>
-                      <button
-                        type="button"
-                        className={`payment-option ${paymentMethod === "CARD" ? "active" : ""}`}
-                        onClick={() => setPaymentMethod("CARD")}
-                      >
+                      <button type="button" className={`payment-option ${paymentMethod === "CARD" ? "active" : ""}`}
+                        onClick={() => setPaymentMethod("CARD")}>
                         <CreditCard size={16} /> Carte
                       </button>
                     </div>
@@ -1046,7 +1045,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
                     onClick={handleComplete}
                     disabled={completing || lines.length === 0 || !canTender}
                   >
-                    {completing ? "Completing…" : (<><CircleDollarSign size={16} /> Charge {formatMoney(total)}</>)}
+                    {completing ? "Traitement…" : (<><CircleDollarSign size={16} /> {`Charge ${formatMoney(total)}`}</>)}
                   </button>
                   {paymentMethod === "CASH" && tenderedNum < total && total > 0 && (
                     <div className="complete-hint">Il faut au moins {formatMoney(total)} en espèces.</div>
@@ -1570,7 +1569,7 @@ function CheckoutTab({ tills, products, prices, resumeTicketId, onResumeHandled,
         .totals-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-soft); }
         .totals-row.big { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--ink); margin-top: 6px; }
 
-        .payment-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .payment-toggle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
         .payment-option {
           display: flex; align-items: center; justify-content: center; gap: 8px;
           padding: 10px; border-radius: 8px; cursor: pointer;
